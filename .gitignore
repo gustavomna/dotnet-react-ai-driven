@@ -1,0 +1,35 @@
+node_modules
+dist
+dist-ssr
+*.local
+*.tsbuildinfo
+
+# Env
+.env
+.env.local
+.env.production
+.env.test
+
+# Logs
+logs
+*.log
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Coverage
+coverage/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
