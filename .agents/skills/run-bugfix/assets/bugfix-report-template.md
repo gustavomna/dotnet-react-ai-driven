@@ -1,17 +1,17 @@
-# Relatório de Bugfix - [Nome da Funcionalidade]
+# Bugfix Report - [Feature Name]
 
-## Resumo
-- Total de Bugs: [X]
-- Bugs Corrigidos: [Y]
-- Testes de Regressão Criados: [Z]
+## Summary
+- Total Bugs: [X]
+- Bugs Fixed: [Y]
+- Regression Tests Created: [Z]
 
-## Detalhes por Bug
-| ID | Severidade | Status | Correção | Testes Criados |
-|----|------------|--------|----------|----------------|
-| BUG-01 | Alta | Corrigido | [descrição] | [lista] |
+## Details by Bug
+| ID | Severity | Status | Fix | Tests Created |
+|----|----------|--------|-----|----------------|
+| BUG-01 | High | Fixed | [description] | [list] |
 
-## Testes
-- Testes unitários: TODOS PASSANDO
-- Testes de integração: TODOS PASSANDO
-- Testes E2E: TODOS PASSANDO
-- Tipagem: SEM ERROS
+## Tests
+- Unit tests: ALL PASSING
+- Integration tests: ALL PASSING
+- E2E tests: ALL PASSING
+- Type checking: NO ERRORS

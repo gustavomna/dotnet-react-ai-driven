@@ -1,29 +1,29 @@
-# Relatório de QA - [Nome da Funcionalidade]
+# QA Report - [Feature Name]
 
-## Resumo
-- Data: [data]
-- Status: APROVADO / REPROVADO
-- Total de Requisitos: [X]
-- Requisitos Atendidos: [Y]
-- Bugs Encontrados: [Z]
+## Summary
+- Date: [date]
+- Status: APPROVED / REJECTED
+- Total Requirements: [X]
+- Requirements Met: [Y]
+- Bugs Found: [Z]
 
-## Requisitos Verificados
-| ID | Requisito | Status | Evidência |
-|----|-----------|--------|-----------|
-| RF-01 | [descrição] | PASSOU/FALHOU | [screenshot] |
+## Verified Requirements
+| ID | Requirement | Status | Evidence |
+|----|-------------|--------|----------|
+| FR-01 | [description] | PASSED/FAILED | [screenshot] |
 
-## Testes E2E Executados
-| Fluxo | Resultado | Observações |
-|-------|-----------|-------------|
-| [fluxo] | PASSOU/FALHOU | [obs] |
+## E2E Tests Executed
+| Flow | Result | Notes |
+|------|--------|-------|
+| [flow] | PASSED/FAILED | [notes] |
 
-## Acessibilidade
-- [checklist de a11y]
+## Accessibility
+- [a11y checklist]
 
-## Bugs Encontrados
-| ID | Descrição | Severidade | Screenshot |
-|----|-----------|------------|------------|
-| BUG-01 | [descrição] | Alta/Média/Baixa | [link] |
+## Bugs Found
+| ID | Description | Severity | Screenshot |
+|----|-------------|----------|------------|
+| BUG-01 | [description] | High/Medium/Low | [link] |
 
-## Conclusão
-[Parecer final do QA]
+## Conclusion
+[Final QA verdict]

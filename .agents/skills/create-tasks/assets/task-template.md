@@ -1,43 +1,43 @@
-# Tarefa X.0: [Título da Tarefa]
+# Task X.0: [Task Title]
 
-<critical>Ler os arquivos de prd.md e techspec.md desta pasta, se você não ler esses arquivos sua tarefa será invalidada</critical>
+<critical>Read the prd.md and techspec.md files in this folder; if you do not read those files your task will be invalidated</critical>
 
-## Visão Geral
+## Overview
 
-[Breve descrição da tarefa]
+[Brief description of the task]
 
 <skills>
-### Conformidade com Skills Padrões
+### Standards Skills Compliance
 
-[Pesquisa as skills na pasta @.claude/skills que se encaixam e se apliquem nesta techspec e liste-as abaixo:]
+[Search the skills in the @.claude/skills folder that fit and apply to this techspec and list them below:]
 </skills>
 
 <requirements>
-[Lista de requisitos obrigatórios]
+[List of mandatory requirements]
 </requirements>
 
-## Subtarefas
+## Subtasks
 
-- [ ] X.1 [Descrição da subtarefa]
-- [ ] X.2 [Descrição da subtarefa]
+- [ ] X.1 [Subtask description]
+- [ ] X.2 [Subtask description]
 
-## Detalhes de Implementação
+## Implementation Details
 
-[Seções relevantes da spec técnica **NÃO PRECISA MOSTRAR TODA A IMPLEMENTAÇÃO, APENAS REFERENCIE A techspec.md**]
+[Relevant sections from the technical spec **YOU DO NOT NEED TO SHOW THE FULL IMPLEMENTATION, JUST REFERENCE techspec.md**]
 
-## Critérios de Sucesso
+## Success Criteria
 
-- [Resultados mensuráveis]
-- [Requisitos de qualidade]
+- [Measurable outcomes]
+- [Quality requirements]
 
-## Testes da Tarefa
+## Task Tests
 
-- [ ] Testes de unidade
-- [ ] Testes de integração
-- [ ] Testes E2E (se aplicável)
+- [ ] Unit tests
+- [ ] Integration tests
+- [ ] E2E tests (if applicable)
 
-<critical>SEMPRE CRIE E EXECUTE OS TESTES DA TAREFA ANTES DE CONSIDERÁ-LA FINALIZADA</critical>
+<critical>ALWAYS CREATE AND RUN THE TASK TESTS BEFORE CONSIDERING IT FINISHED</critical>
 
-## Arquivos relevantes
+## Relevant Files
 
-- [Arquivos relevantes desta tarefa]
+- [Files relevant to this task]

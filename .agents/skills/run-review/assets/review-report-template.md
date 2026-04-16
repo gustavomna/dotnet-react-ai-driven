@@ -1,44 +1,44 @@
-# Relatório de Code Review - [Nome da Funcionalidade]
+# Code Review Report - [Feature Name]
 
-## Resumo
-- Data: [data]
+## Summary
+- Date: [date]
 - Branch: [branch]
-- Status: APROVADO / APROVADO COM RESSALVAS / REPROVADO
-- Arquivos Modificados: [X]
-- Linhas Adicionadas: [Y]
-- Linhas Removidas: [Z]
+- Status: APPROVED / APPROVED WITH OBSERVATIONS / REJECTED
+- Files Modified: [X]
+- Lines Added: [Y]
+- Lines Removed: [Z]
 
-## Conformidade com Rules
-| Rule | Status | Observações |
-|------|--------|-------------|
-| [rule] | OK/NOK | [obs] |
+## Rules Compliance
+| Rule | Status | Notes |
+|------|--------|-------|
+| [rule] | OK/NOK | [notes] |
 
-## Aderência à TechSpec
-| Decisão Técnica | Implementado | Observações |
-|-----------------|--------------|-------------|
-| [decisão] | SIM/NÃO | [obs] |
+## TechSpec Adherence
+| Technical Decision | Implemented | Notes |
+|--------------------|-------------|-------|
+| [decision] | YES/NO | [notes] |
 
-## Tasks Verificadas
-| Task | Status | Observações |
-|------|--------|-------------|
-| [task] | COMPLETA/INCOMPLETA | [obs] |
+## Tasks Verified
+| Task | Status | Notes |
+|------|--------|-------|
+| [task] | COMPLETE/INCOMPLETE | [notes] |
 
-## Testes
-- Total de Testes: [X]
-- Passando: [Y]
-- Falhando: [Z]
+## Tests
+- Total Tests: [X]
+- Passing: [Y]
+- Failing: [Z]
 - Coverage: [%]
 
-## Problemas Encontrados
-| Severidade | Arquivo | Linha | Descrição | Sugestão |
-|------------|---------|-------|-----------|----------|
-| Alta/Média/Baixa | [file] | [line] | [desc] | [fix] |
+## Issues Found
+| Severity | File | Line | Description | Suggestion |
+|----------|------|------|-------------|------------|
+| High/Medium/Low | [file] | [line] | [desc] | [fix] |
 
-## Pontos Positivos
-- [pontos positivos identificados]
+## Positive Highlights
+- [positive points identified]
 
-## Recomendações
-- [recomendações de melhoria]
+## Recommendations
+- [improvement recommendations]
 
-## Conclusão
-[Parecer final do review]
+## Conclusion
+[Final review verdict]

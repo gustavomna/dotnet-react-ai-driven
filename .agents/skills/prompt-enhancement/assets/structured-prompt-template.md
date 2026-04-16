@@ -1,61 +1,61 @@
-<task>[Descrição concisa da tarefa em uma linha]</task>
+<task>[Concise one-line task description]</task>
 
 <goals>
-    [Objetivo em uma frase — foco do modelo]
+    [Objective in one sentence — model focus]
 </goals>
 
 <role>
-    [Papel do agente, stack, contexto da tarefa]
+    [Agent role, stack, task context]
 </role>
 
 <requirements>
     ### Business
 
-    - [Requisitos de negócio]
+    - [Business requirements]
 
     ### Technical
 
-    - [Requisitos técnicos: stack, arquitetura, fluxo de dados]
+    - [Technical requirements: stack, architecture, data flow]
 
     ### UI/UX
 
-    - [Requisitos de interface: responsividade, loading, erros, feedback visual]
+    - [Interface requirements: responsiveness, loading, errors, visual feedback]
 
 </requirements>
 
 <workflow>
-    1. [Primeiro passo lógico]
-    2. [Segundo passo]
-    3. [Terceiro passo]
+    1. [First logical step]
+    2. [Second step]
+    3. [Third step]
 </workflow>
 
 <output>
-    [Formato esperado: código, JSON, tabela, estrutura de arquivos]
+    [Expected format: code, JSON, table, file structure]
 </output>
 
 <endpoints>
-    ### [Nome da API/Serviço]
+    ### [API/Service Name]
 
-    - [URL e descrição]
-    - [Método, rota, status codes]
+    - [URL and description]
+    - [Method, route, status codes]
 
 </endpoints>
 
 <tests>
-    ### [Categoria de testes]
+    ### [Test category]
 
-    - [Validações a executar]
+    - [Validations to run]
 
 </tests>
 
 <critical>
-    ### Skills obrigatórias
+    ### Required skills
 
-    - [Lista de skills do projeto]
+    - [List of project skills]
 
-    ### Fora do Escopo
+    ### Out of Scope
 
-    - *NÃO* [restrição explícita]
-    - *NUNCA* [restrição absoluta]
+    - *DO NOT* [explicit restriction]
+    - *NEVER* [absolute restriction]
 
 </critical>
