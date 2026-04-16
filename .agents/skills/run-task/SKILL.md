@@ -1,5 +1,5 @@
 ---
-name: executar-task
+name: run-task
 description: Implements feature tasks by loading required skills, reading PRD/TechSpec context, analyzing dependencies, and executing the implementation with tests. Marks tasks as complete in tasks.md and triggers the task-reviewer agent upon completion. Use when the user asks to implement a task, execute a task, or start working on a specific task number. Do not use for creating tasks, running QA, code review, or bug fixing.
 ---
 

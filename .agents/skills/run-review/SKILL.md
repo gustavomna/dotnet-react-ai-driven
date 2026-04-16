@@ -1,5 +1,5 @@
 ---
-name: executar-review
+name: run-review
 description: Performs comprehensive code review by analyzing git diff, verifying conformance with project rules, validating test suites, and checking adherence to Tech Spec and Tasks. Generates a structured code review report with severity-classified findings. Use when the user asks for a code review, wants to validate code quality, or needs pre-merge verification. Do not use for QA testing, bug fixing, or task implementation.
 ---
 
@@ -32,7 +32,7 @@ description: Performs comprehensive code review by analyzing git diff, verifying
    - Code standards (formatting, linting).
    - No unauthorized dependencies introduced.
    - Error handling patterns.
-   - Language conventions (Portuguese/English as defined).
+   - Language conventions (English as defined).
 
 **Step 4: Tech Spec Adherence Verification (Mandatory)**
 1. Compare implementation against the Tech Spec:

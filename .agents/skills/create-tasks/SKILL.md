@@ -1,5 +1,5 @@
 ---
-name: criar-tasks
+name: create-tasks
 description: Converts PRD and Tech Spec into a detailed, sequenced list of implementation tasks. Each task is a functional, incremental deliverable with its own test suite. Outputs tasks.md and individual task files. Use when the user asks to create tasks, break down work, or plan implementation from an existing PRD and Tech Spec. Do not use for PRD creation, tech spec creation, or actual code implementation.
 ---
 
@@ -55,6 +55,6 @@ description: Converts PRD and Tech Spec into a detailed, sequenced list of imple
 - [ ] Results presented to user.
 
 ## Error Handling
-- If the PRD or Tech Spec is missing, halt and direct the user to the `cria-prd` or `cria-techspec` skill.
+- If the PRD or Tech Spec is missing, halt and direct the user to the `create-prd` or `create-techspec` skill.
 - If the user rejects the high-level task list, revise based on feedback and re-present for approval.
 - If the output directory already contains task files, confirm with the user before overwriting.

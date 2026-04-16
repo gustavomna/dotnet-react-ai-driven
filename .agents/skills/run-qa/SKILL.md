@@ -1,5 +1,5 @@
 ---
-name: executar-qa
+name: run-qa
 description: Validates feature implementation against PRD, Tech Spec, and Tasks through E2E testing with Playwright MCP, accessibility verification (WCAG 2.2), and visual analysis. Documents all bugs found with screenshot evidence and generates a comprehensive QA report. Use when the user asks to run QA, validate a feature, or test implementation completeness. Do not use for code review, bug fixing, or task implementation.
 ---
 

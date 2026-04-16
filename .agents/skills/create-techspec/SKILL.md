@@ -1,5 +1,5 @@
 ---
-name: cria-techspec
+name: create-techspec
 description: Creates Technical Specifications from existing PRDs, translating product requirements into architectural decisions and implementation guidance. Performs deep project analysis, uses Context7 MCP for technical research and Web Search for business rules. Use when the user asks to create a tech spec, define architecture, or plan implementation for a feature with an existing PRD. Do not use for PRD creation, task breakdowns, or direct code implementation.
 ---
 
@@ -71,6 +71,6 @@ description: Creates Technical Specifications from existing PRDs, translating pr
 - [ ] Final output path provided and confirmed.
 
 ## Error Handling
-- If the PRD does not exist at the expected path, halt and ask the user to create it first via the `cria-prd` skill.
+- If the PRD does not exist at the expected path, halt and ask the user to create it first via the `create-prd` skill.
 - If Context7 MCP is unavailable, fall back to Web Search for technical documentation.
 - If the output file already exists, confirm with the user before overwriting.
