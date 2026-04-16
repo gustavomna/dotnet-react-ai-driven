@@ -1,76 +1,76 @@
 # Prompt Schema (Structured Format)
 
-Prompts estruturados usam blocos XML para organizar o contexto. Cada bloco tem um propósito específico. Técnicas de prompt engineering aplicadas: contextual priming, delimitadores, XML tags, output format control.
+Structured prompts use XML blocks to organize context. Each block has a specific purpose. Prompt engineering techniques applied: contextual priming, delimiters, XML tags, output format control.
 
-## Blocos Obrigatórios
+## Required Blocks
 
-| Bloco | Propósito | Exemplo |
-|-------|-----------|---------|
-| `<task>` | Descrição concisa da tarefa em uma linha | `<task>Implementação do Painel de Clima</task>` |
-| `<role>` | Papel do agente e contexto da tarefa | `<role>Você é um desenvolvedor full stack senior...</role>` |
-| `<requirements>` | Requisitos organizados por categoria | Business, Technical, UI/UX |
-| `<critical>` | Restrições e skills obrigatórias | Skills, fora do escopo |
+| Block | Purpose | Example |
+|-------|---------|---------|
+| `<task>` | Concise one-line description of the task | `<task>Weather Dashboard Implementation</task>` |
+| `<role>` | Agent role and task context | `<role>You are a senior full-stack developer...</role>` |
+| `<requirements>` | Requirements organized by category | Business, Technical, UI/UX |
+| `<critical>` | Constraints and required skills | Skills, out of scope |
 
-## Blocos Opcionais (incluir quando aplicável)
+## Optional Blocks (include when applicable)
 
-| Bloco | Propósito | Quando usar |
-|-------|-----------|-------------|
-| `<goals>` | Objetivo em uma frase (foco) | Sempre que ajudar a direcionar a atenção do modelo |
-| `<workflow>` | Passos de raciocínio (Chain-of-Thought) | Tarefas complexas com múltiplas etapas |
-| `<output>` | Formato esperado da saída | JSON, tabela, markdown, estrutura de arquivos |
-| `<profile>` | Autor, versão, idioma | Prompts reutilizáveis ou versionados |
-| `<endpoints>` | APIs, rotas, payloads | Quando há integração com APIs ou backend |
-| `<tests>` | Validações e testes | Quando há endpoints ou fluxos a validar |
+| Block | Purpose | When to use |
+|-------|---------|-------------|
+| `<goals>` | Objective in one sentence (focus) | Whenever it helps direct the model's attention |
+| `<workflow>` | Reasoning steps (Chain-of-Thought) | Complex tasks with multiple steps |
+| `<output>` | Expected output format | JSON, table, markdown, file structure |
+| `<profile>` | Author, version, language | Reusable or versioned prompts |
+| `<endpoints>` | APIs, routes, payloads | When there is API or backend integration |
+| `<tests>` | Validations and tests | When there are endpoints or flows to validate |
 
-## Delimitadores
+## Delimiters
 
-Entre blocos longos (mais de 5 linhas), use `---` como separador visual. Delimitadores explícitos melhoram precisão e estabilidade do modelo.
+Between long blocks (more than 5 lines), use `---` as a visual separator. Explicit delimiters improve model precision and stability.
 
-## Estrutura de `<requirements>`
+## `<requirements>` Structure
 
 ```
 ### Business
-- Requisitos de negócio (o que o usuário precisa)
+- Business requirements (what the user needs)
 
 ### Technical
-- Requisitos técnicos (stack, arquitetura, fluxo de dados)
+- Technical requirements (stack, architecture, data flow)
 
 ### UI/UX
-- Requisitos de interface e experiência
+- Interface and experience requirements
 ```
 
-## Estrutura de `<critical>`
+## `<critical>` Structure
 
 ```
-### Skills obrigatórias
-- Lista de skills do projeto que devem ser ativadas
+### Required skills
+- List of project skills that should be activated
 
-### Fora do Escopo
-- O que NÃO deve ser implementado (explícito)
+### Out of Scope
+- What MUST NOT be implemented (explicit)
 ```
 
-## Estrutura de `<goals>`
+## `<goals>` Structure
 
-Uma frase que resume o objetivo principal. Exemplo: "Implementar painel de clima consumindo Open-Meteo via backend, com UI responsiva e feedback visual."
+A sentence summarizing the main objective. Example: "Implement weather dashboard consuming Open-Meteo via the backend, with responsive UI and visual feedback."
 
-## Estrutura de `<workflow>`
+## `<workflow>` Structure
 
-Passos numerados para tarefas complexas (Chain-of-Thought). Exemplo:
-
-```
-1. [Primeiro passo lógico]
-2. [Segundo passo]
-3. [Terceiro passo]
-```
-
-## Estrutura de `<output>`
-
-Especificar formato: "Código React + endpoint Express", "JSON com campos X, Y, Z", "Tabela markdown", etc.
-
-## Estrutura de `<profile>`
+Numbered steps for complex tasks (Chain-of-Thought). Example:
 
 ```
-- author: [nome]
+1. [First logical step]
+2. [Second step]
+3. [Third step]
+```
+
+## `<output>` Structure
+
+Specify format: "React code + .NET endpoint", "JSON with fields X, Y, Z", "Markdown table", etc.
+
+## `<profile>` Structure
+
+```
+- author: [name]
 - version: [semver]
 - language: [pt-BR, en, etc.]
 ```

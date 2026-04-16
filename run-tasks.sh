@@ -169,7 +169,7 @@ for task_file in "${TASK_FILES[@]}"; do
   PROMPT=$(cat <<PROMPT_EOF
 You are an AI assistant responsible for correctly implementing tasks.
 
-Activate and follow the executar-task skill to guide the entire implementation process. The skill contains the complete procedure for setup, analysis, planning, implementation, and review.
+Activate and follow the run-task skill to guide the entire implementation process. The skill contains the complete procedure for setup, analysis, planning, implementation, and review.
 
 Identify and load the skills necessary to execute the task based on the technologies used.
 

@@ -1,23 +1,23 @@
-# Checklist de Validação do Prompt Estruturado
+# Structured Prompt Validation Checklist
 
-Use este checklist para validar o prompt gerado antes de entregar ao usuário.
+Use this checklist to validate the generated prompt before delivering it to the user.
 
-## Blocos
+## Blocks
 
-- [ ] `<task>` presente e conciso (uma linha)
-- [ ] `<goals>` presente (uma frase de foco)
-- [ ] `<role>` define o agente e o contexto
-- [ ] `<requirements>` separados em Business, Technical, UI/UX
-- [ ] `<critical>` inclui skills obrigatórias e fora do escopo
-- [ ] `<workflow>` incluído quando tarefa complexa (múltiplas etapas)
-- [ ] `<output>` incluído quando formato de saída for relevante
-- [ ] `<endpoints>` incluído quando há APIs ou backend
-- [ ] `<tests>` incluído quando há endpoints ou fluxos a validar
+- [ ] `<task>` present and concise (one line)
+- [ ] `<goals>` present (one focusing sentence)
+- [ ] `<role>` defines the agent and the context
+- [ ] `<requirements>` separated into Business, Technical, UI/UX
+- [ ] `<critical>` includes required skills and out of scope
+- [ ] `<workflow>` included when the task is complex (multiple steps)
+- [ ] `<output>` included when the output format is relevant
+- [ ] `<endpoints>` included when there are APIs or backend
+- [ ] `<tests>` included when there are endpoints or flows to validate
 
-## Qualidade
+## Quality
 
-- [ ] Requisitos explícitos (nada implícito ou vago)
-- [ ] Fora do escopo usa *NÃO* ou *NUNCA* para ênfase
-- [ ] Endpoints com método, rota e status codes
-- [ ] UI/UX inclui loading, erros e feedback visual quando aplicável
-- [ ] Delimitador `---` entre blocos longos (5+ linhas)
+- [ ] Explicit requirements (nothing implicit or vague)
+- [ ] Out of scope uses *DO NOT* or *NEVER* for emphasis
+- [ ] Endpoints with method, route, and status codes
+- [ ] UI/UX includes loading, errors, and visual feedback when applicable
+- [ ] Delimiter `---` between long blocks (5+ lines)
