@@ -17,13 +17,10 @@ A project template designed for building full-stack applications with AI agents 
 git clone <this-repo-url> my-project
 cd my-project
 
-# 2. Install frontend dependencies
-cd frontend && npm install && cd ..
+# 2. Install everything (frontend + e2e npm deps + .NET restore)
+./scripts/bootstrap.sh
 
-# 3. Restore backend dependencies
-cd backend && dotnet restore && cd ..
-
-# 4. Start development
+# 3. Start development in two terminals
 # Terminal 1 — Backend
 cd backend && dotnet watch run
 
@@ -31,16 +28,28 @@ cd backend && dotnet watch run
 cd frontend && npm run dev
 ```
 
-Frontend runs on `localhost:5173`, backend on `localhost:5000`.
+Frontend runs on `localhost:5173`, backend on `localhost:5080`. The scaffold ships with a `/api/health` endpoint and a frontend indicator that reads it through the Vite proxy — open `http://localhost:5173` and you should see `Backend health: ok`. (Port 5080 instead of the usual 5000 because macOS reserves :5000 for the AirPlay Receiver.)
+
+### What runs on clone
+
+The template is not empty. It comes with:
+
+- A minimal React 19 + Vite 8 + Tailwind v4 frontend wired to shadcn (`base-nova`).
+- A minimal .NET 10 Web API exposing `GET /api/health`.
+- A Playwright smoke test that exercises both.
+- A worked example PRD at [`tasks/prd-example-health-check/`](./tasks/prd-example-health-check/) showing the shape of PRD / Tech Spec / Tasks the AI workflow produces.
+
+This walking skeleton exists so the AI has a real project to extend — and so you can confirm the stack is healthy before running `/create-prd`.
 
 ## How to Use This as a Base for New Projects
 
-### Step 1: Clone and Clean
+### Step 1: Clone and clean
 
 ```bash
 git clone <this-repo-url> my-new-project
 cd my-new-project
-rm -rf tasks/ docs/prompt.md
+rm -rf tasks/prd-example-health-check  # drop the worked example once you've read it
+rm docs/prompt.md                      # you'll write your own in Step 3
 git init
 ```
 
@@ -88,21 +97,17 @@ claude "/run-bugfix"
 **Or automate everything with the runner script:**
 
 ```bash
-# Run all tasks sequentially
+# Dry-run: list discovered tasks + completion state, exit without running Claude
+./run-tasks.sh tasks/prd-my-feature --list
+
+# Run all pending tasks sequentially
 ./run-tasks.sh tasks/prd-my-feature
 
-# With options
+# Targeted runs
+./run-tasks.sh tasks/prd-my-feature --only 3
+./run-tasks.sh tasks/prd-my-feature --from 2 --no-skip-completed
 ./run-tasks.sh tasks/prd-my-feature --max-turns 80
 ./run-tasks.sh tasks/prd-my-feature --dangerously-skip-permissions
-```
-
-### Step 5: Install External Skills
-
-The `.agents/skills/` directory contains external skills that power the AI workflow. These are referenced in `skills-lock.json`. To add new skills from the community:
-
-```bash
-# Skills are fetched from GitHub repos following the agentskills.io spec
-# Add entries to skills-lock.json and place them in .agents/skills/
 ```
 
 ## Project Structure
@@ -117,26 +122,31 @@ The `.agents/skills/` directory contains external skills that power the AI workf
 │   │   ├── run-review.md          # /run-review — Code review
 │   │   ├── run-qa.md              # /run-qa — Quality assurance
 │   │   └── run-bugfix.md          # /run-bugfix — Fix bugs
-│   ├── agents/
-│   │   └── task-reviewer.md      # Auto-triggered after task completion
-│   └── skills/
-│       └── skills-best-practices/  # Skill authoring guide
+│   ├── agents/            # Council agents (task-reviewer, architect-advisor, ...)
+│   └── skills/            # Symlinks into .agents/skills + local skill(s)
 ├── .agents/
-│   └── skills/            # External AI skills (from community/GitHub)
+│   └── skills/            # External AI skills (cria-prd, executar-task, dotnet-best-practices, ...)
 ├── templates/             # Document templates used by commands
 │   ├── prd-template.md
 │   ├── techspec-template.md
 │   ├── tasks-template.md
 │   └── task-template.md
-├── tasks/                 # Generated PRDs, specs, and tasks (per feature)
+├── tasks/
+│   └── prd-example-health-check/  # Worked example — delete once you're comfortable
 ├── docs/
 │   └── prompt.md          # Your feature description / requirements
-├── frontend/              # React 19 + Vite 8 app
-├── backend/               # .NET 10 ASP.NET Core Web API
+├── frontend/              # React 19 + Vite 8 app (scaffolded, runs on clone)
+├── backend/               # .NET 10 ASP.NET Core Web API (scaffolded, runs on clone)
 ├── e2e/                   # Playwright E2E tests
-├── run-tasks.sh           # Batch runner for all tasks via Claude CLI
+├── scripts/
+│   ├── bootstrap.sh       # One-shot: preflight + npm install + dotnet restore
+│   └── _preflight.sh      # Shared preflight helpers
+├── playwright.config.ts   # Playwright config (boots both servers via webServer)
+├── run-tasks.sh           # Batch runner for all tasks via Claude CLI (supports --list, --only, --from)
+├── .mcp.json              # Context7 + Playwright MCP servers used by the commands
+├── .editorconfig          # Editor/AI formatting contract (2-space JS/TS, 4-space C#)
 ├── CLAUDE.md              # AI agent instructions (read this first)
-├── AGENTS.md              # Agent-specific instructions
+├── AGENTS.md              # Pointer to CLAUDE.md
 └── skills-lock.json       # External skills registry
 ```
 

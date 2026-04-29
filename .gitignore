@@ -1,3 +1,4 @@
+# Node / Vite
 node_modules
 dist
 dist-ssr
@@ -17,12 +18,10 @@ logs
 # Editor
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea
 .DS_Store
 *.suo
-*.ntvs*
-*.njsproj
-*.sln
 *.sw?
 
 # Coverage
@@ -33,3 +32,12 @@ coverage/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+/e2e/test-results/
+/e2e/playwright-report/
+
+# .NET
+bin/
+obj/
+*.user
+*.userprefs
+.vs/

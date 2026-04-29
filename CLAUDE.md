@@ -38,7 +38,18 @@ npx playwright test      # E2E tests (Playwright)
 ```
 
 - Frontend runs on port `localhost:5173`
-- Backend runs on port `localhost:5000` (HTTP) / `localhost:5001` (HTTPS)
+- Backend runs on port `localhost:5080` (HTTP). Port 5000 is avoided because macOS reserves it for the AirPlay Receiver — do not switch back to it.
+
+### Naming convention (English commands, Portuguese skills)
+
+This template mixes two naming layers intentionally. Do not "fix" one to match the other:
+
+- **Slash commands and docs use English names**: `/create-prd`, `/create-techspec`, `/create-tasks`, `/run-task`, `/run-review`, `/run-qa`, `/run-bugfix`.
+- **On-disk skill directories use Portuguese names**: `cria-prd`, `cria-techspec`, `criar-tasks`, `executar-task`, `executar-review`, `executar-qa`, `executar-bugfix`.
+
+Both names resolve because Claude Code surfaces each command file in `.claude/commands/` *and* each skill in `.claude/skills/` or `.agents/skills/`. The command files invoke the Portuguese skills by name. `run-tasks.sh` hardcodes `executar-task` for the same reason.
+
+Renaming the skills would touch `run-tasks.sh`, every command file, and invalidate `skills-lock.json` hashes — not worth it. If you add a new skill, pick one language and stay consistent.
 
 ### Recommended Stack and Skills
 
@@ -46,7 +57,7 @@ npx playwright test      # E2E tests (Playwright)
 | ----------------- | ----------------------------------- | --------------------------------------------------------------------- |
 | React Components  | React 19, hooks                     | `vercel-react-best-practices`, `vercel-composition-patterns`          |
 | UI / shadcn       | shadcn/ui (base-nova), Tailwind v4  | `shadcn`, `frontend-design`                                           |
-| Backend           | .NET 10, ASP.NET Core Web API       | `dotnet`                                                              |
+| Backend           | .NET 10, ASP.NET Core Web API       | `dotnet-best-practices`                                               |
 | Frontend Tests    | Vitest (unit), Playwright (e2e)     | —                                                                     |
 | Backend Tests     | xUnit, FluentAssertions             | —                                                                     |
 | Design / UX       | Interface, accessibility            | `ui-ux-pro-max`, `web-design-guidelines`                              |

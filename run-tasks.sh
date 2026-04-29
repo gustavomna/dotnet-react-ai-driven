@@ -13,11 +13,16 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
 # Defaults
 SKIP_COMPLETED=true
 STOP_ON_ERROR=true
 MAX_TURNS=50
 DANGEROUS_MODE=false
+LIST_ONLY=false
+ONLY_TASK=""
+FROM_TASK=""
 PRD_DIR=""
 
 # Counters
@@ -40,11 +45,16 @@ Options:
   --no-stop-on-error               Continue execution even if a task fails
   --max-turns <N>                  Claude CLI turn limit (default: 50)
   --dangerously-skip-permissions   Skip Claude CLI permission prompts
+  --only <N>                       Run only task N (e.g.: --only 3)
+  --from <N>                       Start at task N and continue from there
+  --list                           Dry-run: list discovered tasks + completion state, then exit
   -h, --help                       Show this message
 
 Examples:
   ./run-tasks.sh tasks/prd-weather-dashboard
-  ./run-tasks.sh tasks/prd-weather-dashboard --no-skip-completed --max-turns 80
+  ./run-tasks.sh tasks/prd-weather-dashboard --list
+  ./run-tasks.sh tasks/prd-weather-dashboard --only 3
+  ./run-tasks.sh tasks/prd-weather-dashboard --from 2 --no-skip-completed
   ./run-tasks.sh tasks/prd-weather-dashboard --dangerously-skip-permissions
 EOF
   exit 0
@@ -72,6 +82,18 @@ while [[ $# -gt 0 ]]; do
       ;;
     --dangerously-skip-permissions)
       DANGEROUS_MODE=true
+      shift
+      ;;
+    --only)
+      ONLY_TASK="$2"
+      shift 2
+      ;;
+    --from)
+      FROM_TASK="$2"
+      shift 2
+      ;;
+    --list)
+      LIST_ONLY=true
       shift
       ;;
     -h|--help)
@@ -113,9 +135,13 @@ for required_file in tasks.md prd.md techspec.md; do
   fi
 done
 
-# --- Check that claude CLI is available ---
-if ! command -v claude &> /dev/null; then
-  log_error "Claude CLI not found. Install with: npm install -g @anthropic-ai/claude-code"
+# --- Preflight: check required tools are on PATH ---
+# Load shared preflight helpers (color vars + log_* + preflight_check_tools)
+# shellcheck source=scripts/_preflight.sh
+source "${SCRIPT_DIR}/scripts/_preflight.sh"
+
+if ! preflight_check_tools node dotnet claude; then
+  log_error "Install missing tools and rerun. Claude CLI: npm install -g @anthropic-ai/claude-code"
   exit 1
 fi
 
@@ -149,10 +175,39 @@ is_task_completed() {
   grep -qE "^[[:space:]]*-[[:space:]]*\[x\][[:space:]]*${task_num}\.0" "$PRD_DIR/tasks.md" 2>/dev/null
 }
 
+# --- Dry-run mode: show the plan and exit ---
+if [[ "$LIST_ONLY" == true ]]; then
+  log_info "Dry-run mode (--list). No Claude CLI invocations will be made."
+  printf "\n  %-4s  %-10s  %s\n" "#" "STATE" "FILE"
+  printf "  %-4s  %-10s  %s\n"   "----" "----------" "----"
+  for task_file in "${TASK_FILES[@]}"; do
+    basename_f=$(basename "$task_file")
+    task_num="${basename_f%%_task.md}"
+    if is_task_completed "$task_num"; then
+      state="completed"
+    else
+      state="pending"
+    fi
+    printf "  %-4s  %-10s  %s\n" "$task_num" "$state" "$task_file"
+  done
+  echo ""
+  exit 0
+fi
+
 # --- Main loop ---
 for task_file in "${TASK_FILES[@]}"; do
   basename_f=$(basename "$task_file")
   task_num="${basename_f%%_task.md}"
+
+  # --only: skip every task that isn't exactly N
+  if [[ -n "$ONLY_TASK" && "$task_num" != "$ONLY_TASK" ]]; then
+    continue
+  fi
+
+  # --from: skip tasks with a number below N
+  if [[ -n "$FROM_TASK" && "$task_num" -lt "$FROM_TASK" ]]; then
+    continue
+  fi
 
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   log_info "Task $task_num — $task_file"

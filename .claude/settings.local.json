@@ -1,7 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "Read(//Users/gustavo.araujo/.claude/**)"
+      "Read(//Users/gustavo.araujo/.claude/**)",
+      "Bash(rm .claude/skills/cloudflare .claude/skills/hono)",
+      "Bash(ln -s ../../.agents/skills/dotnet-best-practices .claude/skills/dotnet-best-practices)",
+      "Bash(ln -s ../../.agents/skills/pdf .claude/skills/pdf)",
+      "Bash(ln -s ../../.agents/skills/prompt-enhancement .claude/skills/prompt-enhancement)",
+      "Bash(chmod +x scripts/bootstrap.sh scripts/_preflight.sh run-tasks.sh)",
+      "Bash(npm install *)",
+      "Bash(npm view *)",
+      "Bash(npm run *)",
+      "Bash(dotnet --list-sdks)",
+      "Bash(dotnet restore *)",
+      "Bash(dotnet build *)",
+      "Bash(dotnet test *)",
+      "Bash(npx playwright *)",
+      "Bash(curl -sI http://localhost:5000/api/health)",
+      "Bash(lsof -i :5000 -sTCP:LISTEN)",
+      "Bash(./run-tasks.sh tasks/prd-example-health-check --list)",
+      "Bash(awk '{print $9, $10, $11}')"
     ]
   }
 }

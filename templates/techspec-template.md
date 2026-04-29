@@ -95,13 +95,13 @@ public interface IServiceName
 - Required infrastructure
 - External service availability]
 
-## Monitoring and Observability
+## Observability (if applicable)
 
-[Define monitoring approach using existing infrastructure:
+[Describe observability needs for this feature using whatever stack the project already has. Skip this section entirely if the feature is trivial or no observability infrastructure exists yet.
 
-- Metrics to expose (Prometheus format)
-- Key logs and log levels
-- Integration with existing Grafana dashboards]
+- Key events/metrics worth emitting
+- Log levels and structured fields
+- Any dashboards, alerts, or traces this feature depends on]
 
 ## Technical Considerations
 
