@@ -1,51 +1,51 @@
-# Few-Shot Examples por Tipo de Tarefa
+# Few-Shot Examples by Task Type
 
-Exemplos de transformação para guiar o agente. Use como referência quando a tarefa se encaixar no padrão.
-
----
-
-## Tipo: Feature Full-Stack (API + UI)
-
-**Entrada típica:** "Implemente X que usa a API Y. O frontend deve..."
-
-**Padrão de saída:**
-- `<goals>`: Integrar API Y via backend, expor endpoint, exibir dados em UI responsiva
-- `<workflow>`: 1) Criar endpoint backend → 2) Integrar API externa → 3) Consumir no frontend → 4) Tratar loading/erros
-- `<output>`: Código React + endpoint Express + tipos TypeScript
-- `<endpoints>`: API externa + rota do backend
-- `<tests>`: curl para validar endpoints
+Examples of transformation to guide the agent. Use as reference when the task fits the pattern.
 
 ---
 
-## Tipo: Refatoração / Melhoria
+## Type: Full-Stack Feature (API + UI)
 
-**Entrada típica:** "Melhore o componente X", "Refatore para usar Y"
+**Typical input:** "Implement X that uses API Y. The frontend should..."
 
-**Padrão de saída:**
-- `<goals>`: Refatorar mantendo comportamento, melhorar [performance/legibilidade/UX]
-- `<workflow>`: 1) Analisar código atual → 2) Identificar pontos de melhoria → 3) Aplicar mudanças → 4) Validar
-- `<output>`: Código refatorado com comentários de mudança (se aplicável)
-- `<critical>`: Fora do escopo — não alterar [X, Y, Z]
+**Output pattern:**
+- `<goals>`: Integrate API Y via backend, expose endpoint, display data in responsive UI
+- `<workflow>`: 1) Create backend endpoint → 2) Integrate external API → 3) Consume in frontend → 4) Handle loading/errors
+- `<output>`: React code + .NET endpoint + TypeScript types
+- `<endpoints>`: External API + backend route
+- `<tests>`: curl to validate endpoints
 
 ---
 
-## Tipo: UI/Componente Isolado
+## Type: Refactoring / Improvement
 
-**Entrada típica:** "Crie um botão que faz X", "Faça um card de produto"
+**Typical input:** "Improve component X", "Refactor to use Y"
 
-**Padrão de saída:**
-- `<goals>`: Componente reutilizável com [props/variantes] especificadas
-- `<requirements>`: UI/UX detalhado (estados, acessibilidade, responsividade)
-- `<output>`: Componente React + tipos + exemplo de uso
+**Output pattern:**
+- `<goals>`: Refactor preserving behavior, improve [performance/readability/UX]
+- `<workflow>`: 1) Analyze current code → 2) Identify improvement points → 3) Apply changes → 4) Validate
+- `<output>`: Refactored code with change comments (if applicable)
+- `<critical>`: Out of scope — do not change [X, Y, Z]
+
+---
+
+## Type: UI / Isolated Component
+
+**Typical input:** "Create a button that does X", "Build a product card"
+
+**Output pattern:**
+- `<goals>`: Reusable component with specified [props/variants]
+- `<requirements>`: Detailed UI/UX (states, accessibility, responsiveness)
+- `<output>`: React component + types + usage example
 - Skills: frontend-design, shadcn, ui-ux-pro-max
 
 ---
 
-## Tipo: Integração de Dados (CRUD, Formulário)
+## Type: Data Integration (CRUD, Form)
 
-**Entrada típica:** "Formulário de cadastro que salva em X"
+**Typical input:** "Registration form that saves to X"
 
-**Padrão de saída:**
-- `<workflow>`: 1) Definir schema/validação → 2) Criar endpoint → 3) Formulário com validação → 4) Feedback de sucesso/erro
-- `<output>`: Schema Zod + endpoint + componente de formulário
-- `<tests>`: Validação de payload, tratamento de erros
+**Output pattern:**
+- `<workflow>`: 1) Define schema/validation → 2) Create endpoint → 3) Form with validation → 4) Success/error feedback
+- `<output>`: Zod schema + endpoint + form component
+- `<tests>`: Payload validation, error handling

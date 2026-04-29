@@ -1,42 +1,42 @@
-# Exemplo: Prompt Base vs Prompt Estruturado
+# Example: Base Prompt vs Structured Prompt
 
-## Prompt Base (entrada típica)
+## Base Prompt (typical input)
 
 ```
-Implemente um painel de clima no frontend e backend existente.
+Implement a weather dashboard on the existing frontend and backend.
 
-O usuário deve poder digitar uma cidade e ver o clima atual.
+The user should be able to type a city and see the current weather.
 
-Para obter os dados, utilize a API Open-Meteo (gratuita, sem necessidade de API key):
+To get the data, use the Open-Meteo API (free, no API key required):
 
-• Geocoding API: https://geocoding-api.open-meteo.com/v1/search (converter cidade em coordenadas)
-• Weather API: https://api.open-meteo.com/v1/forecast (obter dados do clima)
+• Geocoding API: https://geocoding-api.open-meteo.com/v1/search (convert city to coordinates)
+• Weather API: https://api.open-meteo.com/v1/forecast (get weather data)
 
-O frontend deve buscar os dados somente do backend. Opcionalmente, o frontend pode tentar obter a localização do usuário pelo navegador (geolocation) e sugerir a cidade automaticamente.
+The frontend should fetch data only from the backend. Optionally, the frontend can try to obtain the user's location via the browser (geolocation) and suggest the city automatically.
 
-Crie um endpoint no backend para o frontend consumir e exiba os dados no painel.
+Create an endpoint on the backend for the frontend to consume and display the data on the dashboard.
 ```
 
-## Problemas do prompt base
+## Problems with the base prompt
 
-- Não define papel do agente
-- Requisitos misturados (business, técnico, UI)
-- Falta especificação de endpoint (método, status codes)
-- Não menciona skills do projeto
-- Não define fora do escopo
-- Falta detalhes de UI/UX (loading, erros, responsividade)
+- Does not define the agent role
+- Mixed requirements (business, technical, UI)
+- Missing endpoint specification (method, status codes)
+- Does not mention project skills
+- Does not define out of scope
+- Missing UI/UX details (loading, errors, responsiveness)
 
-## Prompt Estruturado (saída esperada)
+## Structured Prompt (expected output)
 
-Ver `assets/structured-prompt-template.md` para o template completo. O resultado deve:
+See `assets/structured-prompt-template.md` for the full template. The result should:
 
-1. Extrair a tarefa em `<task>`
-2. Definir `<goals>` (uma frase de foco)
-3. Definir `<role>` com contexto e stack
-4. Separar `<requirements>` em Business, Technical, UI/UX
-5. Incluir `<workflow>` para tarefas com múltiplas etapas
-6. Definir `<output>` quando o formato de saída for relevante
-7. Documentar `<endpoints>` com URLs, métodos, status codes
-8. Incluir `<tests>` quando houver endpoints
-9. Listar `<critical>`: skills obrigatórias e fora do escopo
-10. Usar `---` como delimitador entre blocos longos
+1. Extract the task into `<task>`
+2. Define `<goals>` (one focusing sentence)
+3. Define `<role>` with context and stack
+4. Separate `<requirements>` into Business, Technical, UI/UX
+5. Include `<workflow>` for tasks with multiple steps
+6. Define `<output>` when the output format is relevant
+7. Document `<endpoints>` with URLs, methods, status codes
+8. Include `<tests>` when there are endpoints
+9. List `<critical>`: required skills and out of scope
+10. Use `---` as a delimiter between long blocks

@@ -60,7 +60,7 @@ description: Reviews completed task implementations against project code standar
 - Be thorough but fair: review every changed file, but acknowledge good work.
 - Be specific: always reference the exact file and line number for issues.
 - Provide solutions: suggest fixes with code examples, not just problems.
-- Write the review artifact in Brazilian Portuguese. Code examples remain in English.
+- Write the review artifact in English. Code examples remain in English.
 
 ## Error Handling
 - If no task file is found, report to the user and ask for the task number.

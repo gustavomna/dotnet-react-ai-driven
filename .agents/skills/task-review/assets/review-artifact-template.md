@@ -1,56 +1,56 @@
-# Review: Task [num] - [Título da Task]
+# Review: Task [num] - [Task Title]
 
-**Revisor**: AI Code Reviewer
-**Data**: [YYYY-MM-DD]
-**Arquivo da task**: [num]_task.md
-**Status**: [APROVADO | APROVADO COM OBSERVAÇÕES | MUDANÇAS SOLICITADAS]
+**Reviewer**: AI Code Reviewer
+**Date**: [YYYY-MM-DD]
+**Task file**: [num]_task.md
+**Status**: [APPROVED | APPROVED WITH OBSERVATIONS | CHANGES REQUESTED]
 
-## Resumo
+## Summary
 
-[Breve resumo do que foi implementado e a avaliação geral de qualidade]
+[Brief summary of what was implemented and the overall quality assessment]
 
-## Arquivos Revisados
+## Files Reviewed
 
-| Arquivo | Status | Problemas |
-|---------|--------|-----------|
-| [caminho do arquivo] | [✅ OK / ⚠️ Problemas / ❌ Crítico] | [quantidade] |
+| File | Status | Issues |
+|------|--------|--------|
+| [file path] | [✅ OK / ⚠️ Issues / ❌ Critical] | [count] |
 
-## Problemas Encontrados
+## Issues Found
 
-### 🔴 Problemas Críticos
+### 🔴 Critical Issues
 
-[Liste cada problema crítico com arquivo, linha, descrição e correção sugerida]
-[Se nenhum: "Nenhum problema crítico encontrado."]
+[List each critical issue with file, line, description, and suggested fix]
+[If none: "No critical issues found."]
 
-### 🟡 Problemas Major
+### 🟡 Major Issues
 
-[Liste cada problema major com arquivo, linha, descrição e correção sugerida]
-[Se nenhum: "Nenhum problema major encontrado."]
+[List each major issue with file, line, description, and suggested fix]
+[If none: "No major issues found."]
 
-### 🟢 Problemas Minor
+### 🟢 Minor Issues
 
-[Liste cada problema minor com arquivo, linha, descrição e correção sugerida]
-[Se nenhum: "Nenhum problema minor encontrado."]
+[List each minor issue with file, line, description, and suggested fix]
+[If none: "No minor issues found."]
 
-## ✅ Destaques Positivos
+## ✅ Positive Highlights
 
-[Liste as coisas que foram bem feitas]
+[List the things that were done well]
 
-## Conformidade com Padrões
+## Standards Compliance
 
-| Padrão | Status |
-|--------|--------|
-| Padrões de Código | [✅ / ⚠️ / ❌] |
-| TypeScript/Node.js | [✅ / ⚠️ / ❌] |
-| REST/HTTP | [✅ / ⚠️ / ❌] (se aplicável) |
-| Logging | [✅ / ⚠️ / ❌] (se aplicável) |
-| React | [✅ / ⚠️ / ❌] (se aplicável) |
-| Testes | [✅ / ⚠️ / ❌] |
+| Standard | Status |
+|----------|--------|
+| Code Standards | [✅ / ⚠️ / ❌] |
+| TypeScript / .NET | [✅ / ⚠️ / ❌] |
+| REST/HTTP | [✅ / ⚠️ / ❌] (if applicable) |
+| Logging | [✅ / ⚠️ / ❌] (if applicable) |
+| React | [✅ / ⚠️ / ❌] (if applicable) |
+| Tests | [✅ / ⚠️ / ❌] |
 
-## Recomendações
+## Recommendations
 
-[Lista numerada de recomendações priorizadas para melhoria]
+[Numbered list of prioritized improvement recommendations]
 
-## Veredito
+## Verdict
 
-[Avaliação final com próximos passos claros]
+[Final assessment with clear next steps]
