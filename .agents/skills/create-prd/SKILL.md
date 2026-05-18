@@ -35,6 +35,20 @@ description: Creates Product Requirements Documents (PRDs) from feature requests
 4. Keep the document under 2,000 words.
 5. Do NOT deviate from the template structure.
 
+**Optional Step (before Step 5): Council Consultation**
+
+Skip for trivial features or unambiguous requirements. Invoke when the PRD is non-trivial, the value hypothesis feels weak, or the user asks for "council review".
+
+1. Dispatch in parallel (single assistant message, two `Agent` tool calls):
+   - `product-mind` — challenge the value hypothesis: who specifically benefits, what's the measurable outcome, what's the opportunity cost vs. other roadmap items
+   - `devils-advocate` — surface unstated assumptions, edge cases the requirements ignore, ways this PRD could pass acceptance and still miss its actual goal
+2. Pass each agent a prompt of the form:
+   ```
+   PRD draft for "<feature>": <paste the drafted PRD or its functional requirements>.
+   Return 3–5 bullets in your archetype voice. End with one **Key Point:** line.
+   ```
+3. Incorporate the feedback by either (a) revising the PRD draft, (b) appending an "Open Questions" section listing concerns not yet resolved, or (c) noting in the Step 6 report what was raised and consciously deferred. Do not silently ignore the feedback.
+
 **Step 5: Save the PRD (Mandatory)**
 1. Create the directory: `./tasks/prd-[feature-slug]/`.
 2. Save the PRD to: `./tasks/prd-[feature-slug]/prd.md`.

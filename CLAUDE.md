@@ -68,6 +68,7 @@ Renaming the skills would touch `run-tasks.sh`, every command file, and invalida
 | Code Review       | Code review                         | `run-review`, `task-review`                                           |
 | QA                | Quality Assurance                   | `run-qa`                                                               |
 | Bugfix            | Bug fixing                          | `run-bugfix`                                                           |
+| Council Debate    | Multi-agent decision stress-testing | `council` (orchestrates `architect-advisor`, `devils-advocate`, `pragmatic-engineer`, `product-mind`, `security-advocate`, `the-thinker`) |
 
 ### Project Structure
 

@@ -64,6 +64,22 @@ description: Performs comprehensive code review by analyzing git diff, verifying
 1. Read `references/code-quality-checklist.md` for the full checklist.
 2. Assess: complexity, DRY, SOLID, naming, comments, error handling, security, performance.
 
+**Optional Step (before Step 8): Council Consultation**
+
+Skip for trivial diffs (typo fixes, dependency bumps, doc changes). Invoke when the diff touches authentication, persistence, public APIs, or more than ~200 lines of net-new logic.
+
+1. Dispatch in parallel (single assistant message, three `Agent` tool calls):
+   - `security-advocate` — attack surface introduced by the diff, input validation gaps, auth/authz handling, secrets, injection vectors, blast radius
+   - `architect-advisor` — boundary integrity, coupling regressions, whether the diff respects the Tech Spec's architectural intent or quietly drifts from it
+   - `devils-advocate` — edge cases the tests don't cover, failure modes under concurrency/load/partial-failure, places where the happy path masks brittleness
+2. Pass each agent a prompt of the form:
+   ```
+   Review for "<feature>". Git diff summary: <paste the high-signal parts of git diff main...HEAD — focus on logic changes, not formatting>.
+   Tech Spec reference: <one-paragraph summary>.
+   Return 3–5 specific findings (each tied to a file:line where possible) in your archetype voice. Mark severity as Critical / Major / Minor. End with one **Key Point:** line.
+   ```
+3. Merge findings into Step 8's report under the existing severity sections. A `security-advocate` Critical finding forces REJECTED status regardless of other criteria.
+
 **Step 8: Generate Review Report (Mandatory)**
 1. Read the report template at `assets/review-report-template.md`.
 2. Fill in all sections with actual findings.

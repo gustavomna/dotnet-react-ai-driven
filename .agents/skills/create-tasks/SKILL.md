@@ -26,6 +26,21 @@ description: Converts PRD and Tech Spec into a detailed, sequenced list of imple
 6. Limit to a maximum of 15 tasks (group as needed).
 7. Wait for user approval before proceeding to Step 4.
 
+**Optional Step (before presenting in Step 3): Council Consultation**
+
+Skip for features with fewer than 5 tasks or trivial sequencing. Invoke when the breakdown spans frontend + backend + infra, has cross-task dependencies, or the PRD has tight deadlines.
+
+1. Dispatch in parallel (single assistant message, two `Agent` tool calls):
+   - `pragmatic-engineer` — task sizing realism, sequencing for incremental delivery, "could a junior actually finish this in a day", which tasks should be split or merged
+   - `devils-advocate` — hidden dependencies between tasks, order-of-operations issues, tasks that look independent but aren't, things the breakdown silently assumes are already done
+2. Pass each agent a prompt of the form:
+   ```
+   Task breakdown for "<feature>": <paste the high-level list with each task title + 1-line description>.
+   Tech Spec summary: <one-paragraph>.
+   Return 3–5 bullets in your archetype voice. End with one **Key Point:** line.
+   ```
+3. Revise the high-level list based on feedback BEFORE presenting it to the user in Step 3. The user should see the council-improved list, not the raw first draft.
+
 **Step 4: Generate Task Files (Mandatory)**
 1. Read the tasks summary template at `assets/tasks-template.md`.
 2. Read the individual task template at `assets/task-template.md`.

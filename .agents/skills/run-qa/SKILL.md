@@ -49,6 +49,21 @@ description: Validates feature implementation against PRD, Tech Spec, and Tasks 
 3. Document visual inconsistencies found.
 4. Verify responsiveness if applicable.
 
+**Optional Step (before Step 6): Council Consultation**
+
+Skip for purely visual or single-screen features. Invoke when the feature has multi-step flows, state transitions, or any path where "tests passed but the user didn't get value" is a realistic risk.
+
+1. Dispatch in parallel (single assistant message, two `Agent` tool calls):
+   - `devils-advocate` — edge cases the happy-path E2E missed (empty states, partial network failure, slow connections, double-click/rapid-fire, browser back-button mid-flow, expired sessions, concurrent edits)
+   - `product-mind` — does the implementation actually deliver the PRD's user value, not just pass functional checks (e.g., feature works but takes 3 clicks where the PRD implied 1; success state is technically correct but unclear to the user)
+2. Pass each agent a prompt of the form:
+   ```
+   QA review for "<feature>". PRD's numbered functional requirements: <paste list>.
+   E2E results so far: <PASS/FAIL summary per requirement>.
+   Return 3–5 additional test cases or value-gap concerns to investigate before signing off. End with one **Key Point:** line.
+   ```
+3. Run the additional test cases via Playwright MCP. Promote any failures into Step 6's bug documentation. If `product-mind` flags a value gap that isn't a bug (PRD ambiguity), note it in the QA report as a "PRD clarification needed" rather than a bug.
+
 **Step 6: Bug Documentation**
 1. For each bug found, document with:
    - Bug ID, Description, Severity (High/Medium/Low), Screenshot.

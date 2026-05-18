@@ -121,8 +121,9 @@ claude "/run-bugfix"
 │   │   ├── run-task.md            # /run-task — Implement a task
 │   │   ├── run-review.md          # /run-review — Code review
 │   │   ├── run-qa.md              # /run-qa — Quality assurance
-│   │   └── run-bugfix.md          # /run-bugfix — Fix bugs
-│   ├── agents/            # Council agents (task-reviewer, architect-advisor, ...)
+│   │   ├── run-bugfix.md          # /run-bugfix — Fix bugs
+│   │   └── council.md             # /council — Multi-agent debate among 6 advisor archetypes
+│   ├── agents/            # Council agents (task-reviewer, architect-advisor, devils-advocate, pragmatic-engineer, product-mind, security-advocate, the-thinker)
 │   └── skills/            # Symlinks into .agents/skills + local skill(s)
 ├── .agents/
 │   └── skills/            # External AI skills (cria-prd, executar-task, dotnet-best-practices, ...)
@@ -163,6 +164,8 @@ Skills are reusable instruction sets that teach the AI how to perform specific t
 ### Agents
 
 The `task-reviewer` agent is automatically triggered after task implementation to validate code quality and generate review artifacts.
+
+Six council-debate archetypes live in `.claude/agents/` — `architect-advisor`, `devils-advocate`, `pragmatic-engineer`, `product-mind`, `security-advocate`, and `the-thinker`. They are wired up via the `/council` slash command, which dispatches them in parallel to stress-test a decision across 4 phases (framing → opening statements → rebuttals → synthesis). Use `/council <question>` for cross-cutting decisions, `/council --quick <question>` to skip rebuttals, or `/council --save <question>` to persist the transcript under `tasks/council/`.
 
 ### Templates
 

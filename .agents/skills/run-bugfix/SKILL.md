@@ -23,6 +23,23 @@ description: Reads documented bugs from bugs.md, analyzes root causes, implement
    - Planned regression tests (unit, integration, E2E).
 2. Use Context7 MCP to analyze documentation of involved languages, frameworks, and libraries.
 
+**Optional Step (before Step 3, per bug): Council Consultation**
+
+Skip for bugs with obvious, localized fixes (typo, wrong constant, missing null check). Invoke for any bug that meets at least one of: (a) root cause is unclear after Step 2 analysis, (b) the same bug has been "fixed" before and returned, (c) the fix would touch more than 3 files, or (d) the bug crosses module boundaries.
+
+1. Dispatch in parallel (single assistant message, two `Agent` tool calls):
+   - `the-thinker` — reframe the problem class. The bug may not be what the bug report says it is. Test whether the framing ("this is an X bug") is masking a different relational structure (race condition dressed as a UI bug, contract mismatch dressed as a logic bug, etc.)
+   - `architect-advisor` — is this bug an isolated defect or a symptom of a deeper architectural issue (wrong boundary, missing invariant, coupling that shouldn't exist)? Would the proposed fix harden the architecture or paper over the real problem?
+2. Pass each agent a prompt of the form:
+   ```
+   Bug "<Bug ID>": <bug description from bugs.md>.
+   Root cause hypothesis (from Step 2): <one paragraph>.
+   Planned fix: <one paragraph>.
+   Relevant files: <list>.
+   Return 3–5 bullets in your archetype voice. End with one **Key Point:** line.
+   ```
+3. If `the-thinker` reframes the bug or `architect-advisor` identifies a deeper issue: revise the Step 2 plan before implementing. Document the reframing in `bugs.md` under the bug entry so future occurrences are findable. Do not silently override the council; if you disagree, write the rationale.
+
 **Step 3: Implement Fixes (Mandatory)**
 1. Fix bugs in severity order: High first, then Medium, then Low.
 2. For each bug follow this sequence:

@@ -51,6 +51,25 @@ description: Creates Technical Specifications from existing PRDs, translating pr
 7. Do NOT deviate from the template structure.
 8. Prefer existing libraries over custom development.
 
+**Optional Step (before Step 8): Council Consultation**
+
+Skip for additive specs touching one well-understood module. Invoke when the spec introduces new boundaries, new data flows, externally-facing surfaces, or any irreversible decision (database choice, auth model, public API shape). This is the cheapest moment to surface architectural and security concerns — much cheaper than post-implementation.
+
+1. Dispatch in parallel (single assistant message, three `Agent` tool calls):
+   - `architect-advisor` — coupling, cohesion, boundary correctness, scalability at 10x/100x, technical-debt accumulation
+   - `pragmatic-engineer` — can the team actually ship this in reasonable time, maintenance burden, ramp-up cost, simpler alternatives that ship sooner
+   - `security-advocate` — attack surface, blast radius of compromise, data exposure, auth/authz gaps, compliance implications
+2. Pass each agent a prompt of the form:
+   ```
+   Tech Spec draft for "<feature>": <paste the drafted spec or its architecture+component+data-model sections>.
+   PRD reference: <one-paragraph summary>.
+   Return 3–5 bullets in your archetype voice. End with one **Key Point:** line.
+   ```
+3. Reconcile feedback before Step 8:
+   - **Concrete fixes** → revise the spec sections directly
+   - **Architectural disagreements** → if `architect-advisor` and `pragmatic-engineer` clash, either resolve with the user or document the trade-off in the spec's "Risks" section
+   - **Security findings** → must be addressed in the spec OR explicitly accepted with rationale; never silently dropped
+
 **Step 8: Save Tech Spec (Mandatory)**
 1. Save to: `tasks/prd-[feature-slug]/techspec.md`.
 2. Confirm the write operation and path.
