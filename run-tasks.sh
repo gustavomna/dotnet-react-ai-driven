@@ -6,30 +6,39 @@ set -euo pipefail
 # Usage: ./run-tasks.sh tasks/prd-weather-dashboard [options]
 # =============================================================================
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
+# Colors (TTY only — keep logs free of ANSI escapes when piped to a file)
+if [[ -t 1 ]]; then
+  RED=$'\033[0;31m'
+  GREEN=$'\033[0;32m'
+  YELLOW=$'\033[1;33m'
+  BLUE=$'\033[0;34m'
+  NC=$'\033[0m'
+else
+  RED='' GREEN='' YELLOW='' BLUE='' NC=''
+fi
 
 # Defaults
 SKIP_COMPLETED=true
 STOP_ON_ERROR=true
-MAX_TURNS=50
+MAX_TURNS=""
+TASK_TIMEOUT=0
 DANGEROUS_MODE=false
 LIST_ONLY=false
 ONLY_TASK=""
 FROM_TASK=""
 PRD_DIR=""
+ALLOWED_TOOLS="Bash,Edit,Read,Write,Glob,Grep,Agent,Skill"
 
-# Counters
+# Counters / state
 TOTAL=0
 EXECUTED=0
 SKIPPED=0
 FAILED=0
+LAST_FAILED_TASK=""
+LOCK_DIR=""
+TRAP_INSTALLED=false
 
 usage() {
   cat <<EOF
@@ -43,7 +52,9 @@ Arguments:
 Options:
   --no-skip-completed              Execute even tasks already marked as [x]
   --no-stop-on-error               Continue execution even if a task fails
-  --max-turns <N>                  Claude CLI turn limit (default: 50)
+  --max-turns <N>                  Claude CLI turn limit (default: unlimited; omit to use CLI default)
+  --task-timeout <seconds>         Abort an individual task after N seconds (default: no timeout)
+  --allowed-tools <csv>            Override Claude --allowedTools (default: $ALLOWED_TOOLS)
   --dangerously-skip-permissions   Skip Claude CLI permission prompts
   --only <N>                       Run only task N (e.g.: --only 3)
   --from <N>                       Start at task N and continue from there
@@ -55,6 +66,7 @@ Examples:
   ./run-tasks.sh tasks/prd-weather-dashboard --list
   ./run-tasks.sh tasks/prd-weather-dashboard --only 3
   ./run-tasks.sh tasks/prd-weather-dashboard --from 2 --no-skip-completed
+  ./run-tasks.sh tasks/prd-weather-dashboard --task-timeout 1800
   ./run-tasks.sh tasks/prd-weather-dashboard --dangerously-skip-permissions
 EOF
   exit 0
@@ -65,50 +77,41 @@ log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
 log_warn()    { echo -e "${YELLOW}[SKIP]${NC} $1"; }
 log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 
+is_numeric() { [[ "$1" =~ ^[0-9]+$ ]]; }
+
+# Strip leading zeros so arithmetic comparisons don't interpret "08" as octal
+strip_leading_zeros() { echo "$((10#$1))"; }
+
 # --- Argument parsing ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --no-skip-completed)
-      SKIP_COMPLETED=false
-      shift
-      ;;
+      SKIP_COMPLETED=false; shift ;;
     --no-stop-on-error)
-      STOP_ON_ERROR=false
-      shift
-      ;;
+      STOP_ON_ERROR=false; shift ;;
     --max-turns)
-      MAX_TURNS="$2"
-      shift 2
-      ;;
+      MAX_TURNS="${2:-}"; shift 2 ;;
+    --task-timeout)
+      TASK_TIMEOUT="${2:-}"; shift 2 ;;
+    --allowed-tools)
+      ALLOWED_TOOLS="${2:-}"; shift 2 ;;
     --dangerously-skip-permissions)
-      DANGEROUS_MODE=true
-      shift
-      ;;
+      DANGEROUS_MODE=true; shift ;;
     --only)
-      ONLY_TASK="$2"
-      shift 2
-      ;;
+      ONLY_TASK="${2:-}"; shift 2 ;;
     --from)
-      FROM_TASK="$2"
-      shift 2
-      ;;
+      FROM_TASK="${2:-}"; shift 2 ;;
     --list)
-      LIST_ONLY=true
-      shift
-      ;;
+      LIST_ONLY=true; shift ;;
     -h|--help)
-      usage
-      ;;
+      usage ;;
     -*)
-      log_error "Unknown flag: $1"
-      usage
-      ;;
+      log_error "Unknown flag: $1"; usage ;;
     *)
       if [[ -z "$PRD_DIR" ]]; then
         PRD_DIR="$1"
       else
-        log_error "Unexpected extra argument: $1"
-        usage
+        log_error "Unexpected extra argument: $1"; usage
       fi
       shift
       ;;
@@ -121,7 +124,15 @@ if [[ -z "$PRD_DIR" ]]; then
   usage
 fi
 
-PRD_DIR="${PRD_DIR%/}"
+# Normalize: collapse repeated slashes and strip trailing slashes
+PRD_DIR="$(echo "$PRD_DIR" | sed -E 's#/+#/#g; s#/+$##')"
+
+# Strict charset check — defense in depth against shell metacharacters reaching the prompt
+if [[ ! "$PRD_DIR" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+  log_error "PRD folder contains disallowed characters: $PRD_DIR"
+  log_error "Allowed: letters, digits, dot, underscore, slash, hyphen"
+  exit 1
+fi
 
 if [[ ! -d "$PRD_DIR" ]]; then
   log_error "Folder not found: $PRD_DIR"
@@ -135,14 +146,55 @@ for required_file in tasks.md prd.md techspec.md; do
   fi
 done
 
-# --- Preflight: check required tools are on PATH ---
-# Load shared preflight helpers (color vars + log_* + preflight_check_tools)
+# Numeric validation
+if [[ -n "$ONLY_TASK" ]] && ! is_numeric "$ONLY_TASK"; then
+  log_error "--only expects a non-negative integer, got: $ONLY_TASK"
+  exit 1
+fi
+if [[ -n "$FROM_TASK" ]] && ! is_numeric "$FROM_TASK"; then
+  log_error "--from expects a non-negative integer, got: $FROM_TASK"
+  exit 1
+fi
+if [[ -n "$MAX_TURNS" ]] && ! is_numeric "$MAX_TURNS"; then
+  log_error "--max-turns expects a positive integer, got: $MAX_TURNS"
+  exit 1
+fi
+if ! is_numeric "$TASK_TIMEOUT"; then
+  log_error "--task-timeout expects a non-negative integer (seconds), got: $TASK_TIMEOUT"
+  exit 1
+fi
+
+if [[ -n "$ONLY_TASK" && -n "$FROM_TASK" ]]; then
+  log_error "--only and --from are mutually exclusive"
+  exit 1
+fi
+
+# --- Preflight ---
 # shellcheck source=scripts/_preflight.sh
 source "${SCRIPT_DIR}/scripts/_preflight.sh"
+
+# _preflight.sh uses `: "${VAR:=...}"` which re-populates empty color vars.
+# Re-apply the TTY guard so piped output stays free of ANSI escapes.
+if [[ ! -t 1 ]]; then
+  RED='' GREEN='' YELLOW='' BLUE='' NC=''
+fi
 
 if ! preflight_check_tools node dotnet claude; then
   log_error "Install missing tools and rerun. Claude CLI: npm install -g @anthropic-ai/claude-code"
   exit 1
+fi
+
+# Detect a usable timeout binary (Linux: timeout; macOS w/ coreutils: gtimeout)
+TIMEOUT_CMD=""
+if [[ "$TASK_TIMEOUT" -gt 0 ]]; then
+  if command -v timeout &>/dev/null; then
+    TIMEOUT_CMD="timeout"
+  elif command -v gtimeout &>/dev/null; then
+    TIMEOUT_CMD="gtimeout"
+  else
+    log_warn "--task-timeout set but no 'timeout'/'gtimeout' on PATH; ignoring (brew install coreutils to enable)"
+    TASK_TIMEOUT=0
+  fi
 fi
 
 # --- Discover tasks ---
@@ -150,7 +202,6 @@ TASK_FILES=()
 for f in "$PRD_DIR"/*_task.md; do
   [[ -f "$f" ]] || continue
   basename_f=$(basename "$f")
-  # Exclude review files (*_task_review.md)
   if [[ "$basename_f" =~ ^[0-9]+_task\.md$ ]]; then
     TASK_FILES+=("$f")
   fi
@@ -161,21 +212,61 @@ if [[ ${#TASK_FILES[@]} -eq 0 ]]; then
   exit 1
 fi
 
-# Sort numerically
-IFS=$'\n' TASK_FILES=($(for f in "${TASK_FILES[@]}"; do echo "$f"; done | sort -t/ -k2 -V))
+# Version-sort by full path; works regardless of directory depth
+IFS=$'\n' TASK_FILES=($(printf '%s\n' "${TASK_FILES[@]}" | sort -V))
 unset IFS
 
 TOTAL=${#TASK_FILES[@]}
 log_info "Found $TOTAL task(s) in $PRD_DIR"
 echo ""
 
-# --- Function to check if task is complete ---
+# --- Helpers that depend on PRD_DIR / flags ---
 is_task_completed() {
-  local task_num="$1"
-  grep -qE "^[[:space:]]*-[[:space:]]*\[x\][[:space:]]*${task_num}\.0" "$PRD_DIR/tasks.md" 2>/dev/null
+  local task_num
+  task_num="$(strip_leading_zeros "$1")"
+  # Anchor the trailing position so task 1 doesn't match "10.0"
+  grep -qE "^[[:space:]]*-[[:space:]]*\[x\][[:space:]]*${task_num}\.0([^0-9]|$)" \
+    "$PRD_DIR/tasks.md" 2>/dev/null
 }
 
-# --- Dry-run mode: show the plan and exit ---
+should_filter_task() {
+  local task_num
+  task_num="$(strip_leading_zeros "$1")"
+  if [[ -n "$ONLY_TASK" ]]; then
+    [[ "$task_num" -ne "$(strip_leading_zeros "$ONLY_TASK")" ]] && return 0
+  fi
+  if [[ -n "$FROM_TASK" ]]; then
+    [[ "$task_num" -lt "$(strip_leading_zeros "$FROM_TASK")" ]] && return 0
+  fi
+  return 1
+}
+
+print_summary() {
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo -e "${BLUE}SUMMARY${NC}"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo -e "  Total:    $TOTAL"
+  echo -e "  Executed: ${GREEN}$EXECUTED${NC}"
+  echo -e "  Skipped:  ${YELLOW}$SKIPPED${NC}"
+  echo -e "  Failed:   ${RED}$FAILED${NC}"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  if [[ -n "$LAST_FAILED_TASK" ]]; then
+    echo -e "${YELLOW}Resume with:${NC} $0 $PRD_DIR --from $(strip_leading_zeros "$LAST_FAILED_TASK")"
+    echo ""
+  fi
+}
+
+cleanup() {
+  local code=$?
+  if [[ -n "$LOCK_DIR" && -d "$LOCK_DIR" ]]; then
+    rmdir "$LOCK_DIR" 2>/dev/null || true
+  fi
+  print_summary
+  exit "$code"
+}
+
+# --- Dry-run: show effective plan and exit (no lock, no trap) ---
 if [[ "$LIST_ONLY" == true ]]; then
   log_info "Dry-run mode (--list). No Claude CLI invocations will be made."
   printf "\n  %-4s  %-10s  %s\n" "#" "STATE" "FILE"
@@ -183,7 +274,9 @@ if [[ "$LIST_ONLY" == true ]]; then
   for task_file in "${TASK_FILES[@]}"; do
     basename_f=$(basename "$task_file")
     task_num="${basename_f%%_task.md}"
-    if is_task_completed "$task_num"; then
+    if should_filter_task "$task_num"; then
+      state="filtered"
+    elif is_task_completed "$task_num"; then
       state="completed"
     else
       state="pending"
@@ -194,34 +287,25 @@ if [[ "$LIST_ONLY" == true ]]; then
   exit 0
 fi
 
-# --- Main loop ---
-for task_file in "${TASK_FILES[@]}"; do
-  basename_f=$(basename "$task_file")
-  task_num="${basename_f%%_task.md}"
+# --- Lock against concurrent runs (mkdir is atomic, portable to macOS) ---
+LOCK_DIR="$PRD_DIR/.runlock"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  log_error "Another run-tasks.sh appears to be running for $PRD_DIR"
+  log_error "If you are certain no other run is active, remove the lock manually: rmdir $LOCK_DIR"
+  LOCK_DIR=""  # avoid removing someone else's lock from the trap
+  exit 1
+fi
+trap cleanup EXIT
+TRAP_INSTALLED=true
 
-  # --only: skip every task that isn't exactly N
-  if [[ -n "$ONLY_TASK" && "$task_num" != "$ONLY_TASK" ]]; then
-    continue
-  fi
+# Per-task log directory
+LOG_DIR="$PRD_DIR/.runlogs"
+mkdir -p "$LOG_DIR"
 
-  # --from: skip tasks with a number below N
-  if [[ -n "$FROM_TASK" && "$task_num" -lt "$FROM_TASK" ]]; then
-    continue
-  fi
-
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  log_info "Task $task_num — $task_file"
-
-  # Check if already complete
-  if [[ "$SKIP_COMPLETED" == true ]] && is_task_completed "$task_num"; then
-    log_warn "Task $task_num already complete — skipping"
-    ((SKIPPED++))
-    echo ""
-    continue
-  fi
-
-  # Build prompt
-  PROMPT=$(cat <<PROMPT_EOF
+# --- Prompt template ---
+# Quoted heredoc delimiter ('PROMPT_EOF') disables ALL expansion: no $var, no $(cmd), no `cmd`.
+# Placeholders are substituted later via bash parameter expansion, which does NOT execute commands.
+PROMPT_TEMPLATE=$(cat <<'PROMPT_EOF'
 You are an AI assistant responsible for correctly implementing tasks.
 
 Activate and follow the run-task skill to guide the entire implementation process. The skill contains the complete procedure for setup, analysis, planning, implementation, and review.
@@ -236,42 +320,76 @@ After completing the task, mark it as complete in tasks.md.
 
 ALWAYS RUN the task-reviewer at the end.
 
-Implement task ${task_num} from the PRD located in ${PRD_DIR}.
-- Task file: ${PRD_DIR}/${task_num}_task.md
-- PRD: ${PRD_DIR}/prd.md
-- Tech Spec: ${PRD_DIR}/techspec.md
-- Tasks: ${PRD_DIR}/tasks.md
+Implement task __TASK_NUM__ from the PRD located in __PRD_DIR__.
+- Task file: __PRD_DIR__/__TASK_NUM___task.md
+- PRD: __PRD_DIR__/prd.md
+- Tech Spec: __PRD_DIR__/techspec.md
+- Tasks: __PRD_DIR__/tasks.md
 PROMPT_EOF
 )
 
-  # Build claude command
+# --- Main loop ---
+for task_file in "${TASK_FILES[@]}"; do
+  basename_f=$(basename "$task_file")
+  task_num="${basename_f%%_task.md}"
+
+  if should_filter_task "$task_num"; then
+    continue
+  fi
+
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  log_info "Task $task_num — $task_file"
+
+  if [[ "$SKIP_COMPLETED" == true ]] && is_task_completed "$task_num"; then
+    log_warn "Task $task_num already complete — skipping"
+    SKIPPED=$((SKIPPED + 1))
+    echo ""
+    continue
+  fi
+
+  PROMPT="${PROMPT_TEMPLATE//__TASK_NUM__/$task_num}"
+  PROMPT="${PROMPT//__PRD_DIR__/$PRD_DIR}"
+
   CLAUDE_CMD=(
     claude
     -p "$PROMPT"
-    --allowedTools "Bash,Edit,Read,Write,Glob,Grep,Agent,Skill"
-    --max-turns "$MAX_TURNS"
+    --allowedTools "$ALLOWED_TOOLS"
     --verbose
   )
+
+  if [[ -n "$MAX_TURNS" ]]; then
+    CLAUDE_CMD+=(--max-turns "$MAX_TURNS")
+  fi
 
   if [[ "$DANGEROUS_MODE" == true ]]; then
     CLAUDE_CMD+=(--dangerously-skip-permissions)
   fi
 
-  log_info "Running claude for task $task_num..."
+  if [[ "$TASK_TIMEOUT" -gt 0 && -n "$TIMEOUT_CMD" ]]; then
+    CLAUDE_CMD=("$TIMEOUT_CMD" "$TASK_TIMEOUT" "${CLAUDE_CMD[@]}")
+  fi
+
+  log_file="$LOG_DIR/${task_num}_$(date +%Y%m%d-%H%M%S).log"
+  log_info "Running claude for task $task_num... (log: $log_file)"
   echo ""
 
-  # Execute
+  # Tee output to a per-task log; PIPESTATUS[0] preserves claude's real exit code.
   set +e
-  "${CLAUDE_CMD[@]}"
-  exit_code=$?
+  "${CLAUDE_CMD[@]}" 2>&1 | tee "$log_file"
+  exit_code=${PIPESTATUS[0]}
   set -e
 
   if [[ $exit_code -eq 0 ]]; then
     log_success "Task $task_num completed successfully"
-    ((EXECUTED++))
+    EXECUTED=$((EXECUTED + 1))
   else
-    log_error "Task $task_num failed (exit code: $exit_code)"
-    ((FAILED++))
+    if [[ $exit_code -eq 124 && -n "$TIMEOUT_CMD" ]]; then
+      log_error "Task $task_num timed out after ${TASK_TIMEOUT}s"
+    else
+      log_error "Task $task_num failed (exit code: $exit_code)"
+    fi
+    FAILED=$((FAILED + 1))
+    LAST_FAILED_TASK="$task_num"
 
     if [[ "$STOP_ON_ERROR" == true ]]; then
       log_error "Stopping execution (use --no-stop-on-error to continue)"
@@ -282,17 +400,8 @@ PROMPT_EOF
   echo ""
 done
 
-# --- Summary ---
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo -e "${BLUE}SUMMARY${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo -e "  Total:    $TOTAL"
-echo -e "  Executed: ${GREEN}$EXECUTED${NC}"
-echo -e "  Skipped:  ${YELLOW}$SKIPPED${NC}"
-echo -e "  Failed:   ${RED}$FAILED${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
+# Summary + lock cleanup happen in the EXIT trap.
 if [[ $FAILED -gt 0 ]]; then
   exit 1
 fi
+exit 0
