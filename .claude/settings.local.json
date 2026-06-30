@@ -18,6 +18,10 @@
       "Bash(curl -sI http://localhost:5000/api/health)",
       "Bash(lsof -i :5000 -sTCP:LISTEN)",
       "Bash(./run-tasks.sh tasks/prd-example-health-check --list)",
+      "Bash(./run-tasks.sh tasks/prd-example-health-check --harness auggie --list)",
+      "Bash(auggie --version)",
+      "Bash(auggie --help)",
+      "Bash(auggie --print:*)",
       "Bash(awk '{print $9, $10, $11}')"
     ]
   }

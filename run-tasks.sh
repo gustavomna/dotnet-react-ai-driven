@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # =============================================================================
-# run-tasks.sh — Runs all tasks from a PRD folder via Claude CLI
+# run-tasks.sh — Runs all tasks from a PRD folder via an AI coding harness
+# Supports two harnesses: Claude Code (`claude`, default) and auggie (Augment).
 # Usage: ./run-tasks.sh tasks/prd-weather-dashboard [options]
 # =============================================================================
 
@@ -30,6 +31,11 @@ ONLY_TASK=""
 FROM_TASK=""
 PRD_DIR=""
 ALLOWED_TOOLS="Bash,Edit,Read,Write,Glob,Grep,Agent,Skill"
+# Harness selection: claude (default) or auggie. Overridable via HARNESS env var or --harness.
+HARNESS="${HARNESS:-claude}"
+# auggie MCP config (parallels the project .mcp.json consumed by Claude Code).
+AUGGIE_MCP_CONFIG=".augment/mcp.json"
+MODEL=""
 
 # Counters / state
 TOTAL=0
@@ -50,12 +56,14 @@ Arguments:
   <prd-folder>                     Path to the PRD folder (e.g.: tasks/prd-weather-dashboard)
 
 Options:
+  --harness <claude|auggie>        AI coding harness to use (default: $HARNESS; or set HARNESS env var)
   --no-skip-completed              Execute even tasks already marked as [x]
   --no-stop-on-error               Continue execution even if a task fails
-  --max-turns <N>                  Claude CLI turn limit (default: unlimited; omit to use CLI default)
+  --max-turns <N>                  Harness turn limit (default: unlimited; omit to use CLI default)
+  --model <name>                   Override the harness model (default: harness default)
   --task-timeout <seconds>         Abort an individual task after N seconds (default: no timeout)
-  --allowed-tools <csv>            Override Claude --allowedTools (default: $ALLOWED_TOOLS)
-  --dangerously-skip-permissions   Skip Claude CLI permission prompts
+  --allowed-tools <csv>            Override Claude --allowedTools (claude only; default: $ALLOWED_TOOLS)
+  --dangerously-skip-permissions   Skip Claude CLI permission prompts (claude only)
   --only <N>                       Run only task N (e.g.: --only 3)
   --from <N>                       Start at task N and continue from there
   --list                           Dry-run: list discovered tasks + completion state, then exit
@@ -64,6 +72,8 @@ Options:
 Examples:
   ./run-tasks.sh tasks/prd-weather-dashboard
   ./run-tasks.sh tasks/prd-weather-dashboard --list
+  ./run-tasks.sh tasks/prd-weather-dashboard --harness auggie
+  ./run-tasks.sh tasks/prd-weather-dashboard --harness auggie --list
   ./run-tasks.sh tasks/prd-weather-dashboard --only 3
   ./run-tasks.sh tasks/prd-weather-dashboard --from 2 --no-skip-completed
   ./run-tasks.sh tasks/prd-weather-dashboard --task-timeout 1800
@@ -85,12 +95,16 @@ strip_leading_zeros() { echo "$((10#$1))"; }
 # --- Argument parsing ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --harness)
+      HARNESS="${2:-}"; shift 2 ;;
     --no-skip-completed)
       SKIP_COMPLETED=false; shift ;;
     --no-stop-on-error)
       STOP_ON_ERROR=false; shift ;;
     --max-turns)
       MAX_TURNS="${2:-}"; shift 2 ;;
+    --model)
+      MODEL="${2:-}"; shift 2 ;;
     --task-timeout)
       TASK_TIMEOUT="${2:-}"; shift 2 ;;
     --allowed-tools)
@@ -123,6 +137,15 @@ if [[ -z "$PRD_DIR" ]]; then
   log_error "PRD folder not provided."
   usage
 fi
+
+# Harness must be one of the supported values
+case "$HARNESS" in
+  claude|auggie) ;;
+  *)
+    log_error "--harness expects 'claude' or 'auggie', got: $HARNESS"
+    exit 1
+    ;;
+esac
 
 # Normalize: collapse repeated slashes and strip trailing slashes
 PRD_DIR="$(echo "$PRD_DIR" | sed -E 's#/+#/#g; s#/+$##')"
@@ -179,9 +202,17 @@ if [[ ! -t 1 ]]; then
   RED='' GREEN='' YELLOW='' BLUE='' NC=''
 fi
 
-if ! preflight_check_tools node dotnet claude; then
-  log_error "Install missing tools and rerun. Claude CLI: npm install -g @anthropic-ai/claude-code"
-  exit 1
+# Dry-run (--list) inspects files only and never invokes a harness, so skip the
+# tool preflight there. Otherwise require the binary for the SELECTED harness only.
+if [[ "$LIST_ONLY" != true ]]; then
+  if ! preflight_check_tools node dotnet "$HARNESS"; then
+    if [[ "$HARNESS" == "auggie" ]]; then
+      log_error "Install missing tools and rerun. auggie CLI: npm install -g @augmentcode/auggie"
+    else
+      log_error "Install missing tools and rerun. Claude CLI: npm install -g @anthropic-ai/claude-code"
+    fi
+    exit 1
+  fi
 fi
 
 # Detect a usable timeout binary (Linux: timeout; macOS w/ coreutils: gtimeout)
@@ -268,7 +299,7 @@ cleanup() {
 
 # --- Dry-run: show effective plan and exit (no lock, no trap) ---
 if [[ "$LIST_ONLY" == true ]]; then
-  log_info "Dry-run mode (--list). No Claude CLI invocations will be made."
+  log_info "Dry-run mode (--list). No $HARNESS invocations will be made."
   printf "\n  %-4s  %-10s  %s\n" "#" "STATE" "FILE"
   printf "  %-4s  %-10s  %s\n"   "----" "----------" "----"
   for task_file in "${TASK_FILES[@]}"; do
@@ -308,7 +339,7 @@ mkdir -p "$LOG_DIR"
 PROMPT_TEMPLATE=$(cat <<'PROMPT_EOF'
 You are an AI assistant responsible for correctly implementing tasks.
 
-Activate and follow the run-task skill to guide the entire implementation process. The skill contains the complete procedure for setup, analysis, planning, implementation, and review.
+__SKILL_DIRECTIVE__
 
 Identify and load the skills necessary to execute the task based on the technologies used.
 
@@ -327,6 +358,15 @@ Implement task __TASK_NUM__ from the PRD located in __PRD_DIR__.
 - Tasks: __PRD_DIR__/tasks.md
 PROMPT_EOF
 )
+
+# How to load the run-task skill differs per harness:
+#  - Claude Code has a Skill tool that resolves the skill by name.
+#  - auggie has no Skill tool, so it must read the SKILL.md file directly.
+if [[ "$HARNESS" == "auggie" ]]; then
+  SKILL_DIRECTIVE="Read .agents/skills/run-task/SKILL.md and follow its procedure EXACTLY for setup, analysis, planning, implementation, and review. When reviewing at the end, also read .agents/skills/task-review/SKILL.md."
+else
+  SKILL_DIRECTIVE="Activate and follow the run-task skill to guide the entire implementation process. The skill contains the complete procedure for setup, analysis, planning, implementation, and review."
+fi
 
 # --- Main loop ---
 for task_file in "${TASK_FILES[@]}"; do
@@ -349,33 +389,53 @@ for task_file in "${TASK_FILES[@]}"; do
 
   PROMPT="${PROMPT_TEMPLATE//__TASK_NUM__/$task_num}"
   PROMPT="${PROMPT//__PRD_DIR__/$PRD_DIR}"
+  PROMPT="${PROMPT//__SKILL_DIRECTIVE__/$SKILL_DIRECTIVE}"
 
-  CLAUDE_CMD=(
-    claude
-    -p "$PROMPT"
-    --allowedTools "$ALLOWED_TOOLS"
-    --verbose
-  )
-
-  if [[ -n "$MAX_TURNS" ]]; then
-    CLAUDE_CMD+=(--max-turns "$MAX_TURNS")
-  fi
-
-  if [[ "$DANGEROUS_MODE" == true ]]; then
-    CLAUDE_CMD+=(--dangerously-skip-permissions)
+  # Build the harness command. Claude-only flags (--allowedTools,
+  # --dangerously-skip-permissions) have no auggie equivalent and are skipped there.
+  if [[ "$HARNESS" == "auggie" ]]; then
+    HARNESS_CMD=(
+      auggie
+      --print "$PROMPT"
+    )
+    if [[ -f "$AUGGIE_MCP_CONFIG" ]]; then
+      HARNESS_CMD+=(--mcp-config "$AUGGIE_MCP_CONFIG")
+    fi
+    if [[ -n "$MAX_TURNS" ]]; then
+      HARNESS_CMD+=(--max-turns "$MAX_TURNS")
+    fi
+    if [[ -n "$MODEL" ]]; then
+      HARNESS_CMD+=(--model "$MODEL")
+    fi
+  else
+    HARNESS_CMD=(
+      claude
+      -p "$PROMPT"
+      --allowedTools "$ALLOWED_TOOLS"
+      --verbose
+    )
+    if [[ -n "$MAX_TURNS" ]]; then
+      HARNESS_CMD+=(--max-turns "$MAX_TURNS")
+    fi
+    if [[ -n "$MODEL" ]]; then
+      HARNESS_CMD+=(--model "$MODEL")
+    fi
+    if [[ "$DANGEROUS_MODE" == true ]]; then
+      HARNESS_CMD+=(--dangerously-skip-permissions)
+    fi
   fi
 
   if [[ "$TASK_TIMEOUT" -gt 0 && -n "$TIMEOUT_CMD" ]]; then
-    CLAUDE_CMD=("$TIMEOUT_CMD" "$TASK_TIMEOUT" "${CLAUDE_CMD[@]}")
+    HARNESS_CMD=("$TIMEOUT_CMD" "$TASK_TIMEOUT" "${HARNESS_CMD[@]}")
   fi
 
   log_file="$LOG_DIR/${task_num}_$(date +%Y%m%d-%H%M%S).log"
-  log_info "Running claude for task $task_num... (log: $log_file)"
+  log_info "Running $HARNESS for task $task_num... (log: $log_file)"
   echo ""
 
-  # Tee output to a per-task log; PIPESTATUS[0] preserves claude's real exit code.
+  # Tee output to a per-task log; PIPESTATUS[0] preserves the harness's real exit code.
   set +e
-  "${CLAUDE_CMD[@]}" 2>&1 | tee "$log_file"
+  "${HARNESS_CMD[@]}" 2>&1 | tee "$log_file"
   exit_code=${PIPESTATUS[0]}
   set -e
 

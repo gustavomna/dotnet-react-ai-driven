@@ -4,6 +4,44 @@ Guide for AI agents when working with the code in this repository.
 
 This project uses **React 19 + Vite 8** on the frontend and **.NET 10 Web API** on the backend.
 
+## Harnesses
+
+This repo supports **two AI coding harnesses** as co-equals: **Claude Code** (`claude`) and **auggie** (Augment Code CLI). Both read this `CLAUDE.md` as the single source of truth (auggie auto-loads `CLAUDE.md`, then `AGENTS.md`, at the workspace root). The skills in **`.agents/skills/`** are **harness-neutral** plain markdown and are the single source — never fork or duplicate a skill body per harness.
+
+**Launching:**
+
+```bash
+claude                      # Claude Code (interactive)
+auggie                      # auggie (interactive)
+auggie --print "<prompt>"   # auggie one-shot / non-interactive
+```
+
+**Running tasks under a chosen harness:**
+
+```bash
+./run-tasks.sh tasks/prd-<feature>                    # claude (default)
+./run-tasks.sh tasks/prd-<feature> --harness auggie   # auggie  (or set HARNESS=auggie)
+```
+
+**File-layout parity** (add/edit a wrapper in BOTH harness dirs to avoid drift — the shared skill body stays single-source):
+
+| Concern        | Claude Code            | auggie                  | Shared / single-source        |
+| -------------- | ---------------------- | ----------------------- | ----------------------------- |
+| Slash commands | `.claude/commands/`    | `.augment/commands/`    | —                             |
+| Sub-agents     | `.claude/agents/`      | `.augment/agents/`      | —                             |
+| Skills         | (via `.agents/skills/`) | (via `.agents/skills/`) | **`.agents/skills/*/SKILL.md`** |
+| MCP servers    | `.mcp.json`            | `.augment/mcp.json`     | keep both in sync (same servers) |
+| Project rules  | `CLAUDE.md`            | `CLAUDE.md` + `AGENTS.md` | **`CLAUDE.md`**               |
+
+**auggie conventions that differ from Claude Code** (handled in the `.augment/*` wrappers — do not "fix"):
+
+- **No Skill tool.** Claude commands say "activate the X skill"; the `.augment/commands/*.md` instead tell auggie to **read `.agents/skills/<skill>/SKILL.md`** and follow it. `run-tasks.sh` emits the matching directive automatically for `--harness auggie`.
+- **Sequential sub-agents.** auggie dispatches sub-agents by name ("Use the `architect-advisor` agent …") and runs them **sequentially**, not via a parallel `Agent` tool. The `council` wrapper accounts for this.
+- **Tool names.** Advisor archetypes are kept read-only via `disabled_tools: str-replace-editor, save-file, remove-files, launch-process` (auggie tool names), not Claude's `tools: Read, Grep, …`.
+- **Command precedence.** auggie reads `.augment/commands/` before `.claude/commands/`, so the mirrored commands correctly shadow the Claude ones.
+
+> **Drift warning:** adding or renaming a command/agent now means updating **both** `.claude/*` and `.augment/*`. The skill body in `.agents/skills/` remains the single source — only the thin wrappers are mirrored.
+
 ### Priorities
 
 - **Always check skills** before implementing — tasks without relevant skills may be invalidated
