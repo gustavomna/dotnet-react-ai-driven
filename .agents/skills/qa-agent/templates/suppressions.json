@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "suppressions": [
+    {
+      "id": "sup-001",
+      "target": "a11y:aria-required-children:frontend/src/vendor/date-picker.tsx",
+      "reason": "third-party date picker; upstream issue vendor/dp#412",
+      "expires": "2026-12-31",
+      "scope": "third-party",
+      "addedBy": "gustavo",
+      "addedAt": "2026-07-25"
+    }
+  ]
+}

@@ -1,0 +1,295 @@
+# =============================================================================
+# EXAMPLE WORKFLOW — NOT ACTIVE
+#
+# This file lives under .agents/skills/qa-agent/examples/ci/ and does nothing
+# where it sits. To use it, COPY it into .github/workflows/ in your repository:
+#
+#   cp .agents/skills/qa-agent/examples/ci/github-actions.yml .github/workflows/qa-agent.yml
+#
+# It is written for THIS repository's layout — React 19 + Vite frontend in
+# frontend/ (npm), Playwright specs in e2e/ (npm), .NET 10 Web API and xUnit
+# tests in backend/. Adjust the paths for another layout.
+#
+# It drives the Python CLI directly so every command matches the documented
+# surface. ./run-qa-agent.sh wraps the same sequence for local headless runs.
+#
+# CI-specific policy: gate.skippedLayers is "fail". A layer that cannot run in
+# CI is a failure here, not a warning — an incomplete round must never look
+# like a green one on a pull request.
+# =============================================================================
+
+name: QA Agent
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: qa-agent-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    name: QA round
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    env:
+      QA: python3 .agents/skills/qa-agent/scripts/qa.py
+      QA_CONFIG: qa/qa.config.ci.json
+
+    steps:
+      # fetch-depth 0 is required: scope resolution diffs the PR branch against
+      # its base, and a shallow clone has no base commit to diff against.
+      - name: Check out the pull request branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            e2e/package-lock.json
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The agent is standard-library Python only, so there is nothing to pip install.
+      - name: Verify the agent
+        run: $QA selftest
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Install e2e dependencies
+        run: npm ci --prefix e2e
+
+      - name: Install Playwright browsers
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Restore backend
+        run: dotnet restore backend/Backend.sln
+
+      # Every key is optional; this file only overrides what CI needs to differ on.
+      - name: Write the CI configuration
+        run: |
+          mkdir -p qa
+          cat > qa/qa.config.ci.json <<'JSON'
+          {
+            "schemaVersion": 1,
+            "roundSequence": "independent",
+            "outputDir": "qa",
+            "layers": {"unit": true, "integration": true, "e2e": true, "a11y": true},
+            "gate": {"skippedLayers": "fail", "staleRound": "warn", "flaky": "fail"},
+            "scope": {"defaultBase": "main", "packages": []},
+            "generation": {"autoStage": false, "testDirOverrides": {}},
+            "a11y": {"tags": ["wcag2a", "wcag2aa", "wcag22aa"], "routes": [], "failOnIncomplete": false},
+            "execution": {"timeoutSeconds": 1800, "retryFailedOnce": true}
+          }
+          JSON
+
+      # Exit 3 (NO_STACK) is a stop, not a failure: report it and finish neutrally.
+      - name: Detect the test stack
+        id: detect
+        run: |
+          set +e
+          $QA detect --repo . --config "$QA_CONFIG" --json > qa-stack.json
+          code=$?
+          set -e
+          if [ "$code" -eq 3 ]; then
+            echo "QA_STATUS=no-stack" >> "$GITHUB_ENV"
+            echo "No test stack detected. Adding a test framework is a human decision." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ "$code" -ne 0 ]; then
+            echo "detect failed with exit code $code" >&2
+            exit "$code"
+          fi
+          echo "QA_STATUS=ok" >> "$GITHUB_ENV"
+
+      # Exit 4 (EMPTY_SCOPE) is legitimate: a docs-only PR has nothing to run.
+      - name: Resolve the scope against the base branch
+        if: env.QA_STATUS == 'ok'
+        run: |
+          BASE="${{ github.base_ref }}"
+          git fetch --no-tags --quiet origin "$BASE"
+          set +e
+          $QA scope --repo . --config "$QA_CONFIG" \
+            --ref-range "origin/${BASE}...HEAD" --json > qa-scope.json
+          code=$?
+          set -e
+          if [ "$code" -eq 4 ]; then
+            echo "QA_STATUS=empty-scope" >> "$GITHUB_ENV"
+            echo "Scope is empty for this pull request; nothing to verify." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ "$code" -ne 0 ]; then
+            echo "scope failed with exit code $code" >&2
+            exit "$code"
+          fi
+
+      - name: Allocate a findings round
+        if: env.QA_STATUS == 'ok'
+        run: |
+          $QA round new --repo . --config "$QA_CONFIG" --json > qa-round.json
+          echo "QA_ROUND=$(jq -r '.round' qa-round.json)" >> "$GITHUB_ENV"
+          echo "QA_ROUND_ID=$(jq -r '.id' qa-round.json)" >> "$GITHUB_ENV"
+
+      - name: Derive the plan
+        if: env.QA_STATUS == 'ok'
+        run: |
+          $QA plan --repo . --config "$QA_CONFIG" --round "$QA_ROUND" \
+            --scope qa-scope.json --stack qa-stack.json --json
+
+      # continue-on-error: a failing round must still produce a summary, an
+      # artifact, and a pull-request comment. The gate step below is what fails
+      # the job.
+      - name: Execute the layers
+        if: env.QA_STATUS == 'ok'
+        continue-on-error: true
+        run: |
+          $QA exec --repo . --config "$QA_CONFIG" --round "$QA_ROUND" \
+            --stack qa-stack.json --scope qa-scope.json \
+            --plan "qa/rounds/${QA_ROUND_ID}/plan.json"
+
+      - name: Write the findings
+        if: env.QA_STATUS == 'ok'
+        continue-on-error: true
+        run: |
+          $QA report --repo . --config "$QA_CONFIG" --round "$QA_ROUND" \
+            --author "github-actions" \
+            --plan "qa/rounds/${QA_ROUND_ID}/plan.json"
+
+      - name: Upload the round as an artifact
+        if: always() && env.QA_STATUS == 'ok'
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-round-${{ env.QA_ROUND_ID }}
+          path: qa/rounds/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Post the per-severity counts to the pull request
+        if: always() && env.QA_STATUS == 'ok'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SUMMARY="qa/rounds/${QA_ROUND_ID}/summary.json"
+          if [ ! -f "$SUMMARY" ]; then
+            echo "No summary.json produced; skipping the comment." >&2
+            exit 0
+          fi
+
+          VERDICT=$(jq -r '.verdict | ascii_upcase' "$SUMMARY")
+          COMPLETE=$(jq -r '.complete' "$SUMMARY")
+          SKIPPED=$(jq -r '[.skippedLayers[]? | "\(.layer): \(.reason)"] | join("; ")' "$SUMMARY")
+
+          # PASS on an incomplete round is never reported as a bare PASS.
+          VERDICT_LINE="$VERDICT"
+          if [ "$COMPLETE" != "true" ] && [ -n "$SKIPPED" ]; then
+            VERDICT_LINE="$VERDICT — INCOMPLETE ($SKIPPED)"
+          fi
+
+          {
+            echo "## QA Agent — round ${QA_ROUND_ID}"
+            echo
+            echo "**Verdict: ${VERDICT_LINE}**"
+            echo
+            echo "| Severity | Count |"
+            echo "|---|---|"
+            jq -r '.counts | "| critical | \(.critical) |\n| high | \(.high) |\n| medium | \(.medium) |\n| low | \(.low) |\n| **total** | **\(.total)** |"' "$SUMMARY"
+            echo
+            echo "| Layer | Status | Exit |"
+            echo "|---|---|---|"
+            jq -r '.layers[] | "| \(.layer) | \(.status) | \(.exitCode // "n/a") |"' "$SUMMARY"
+            echo
+
+            COUNT=$(jq -r '.issues | length' "$SUMMARY")
+            if [ "$COUNT" -gt 0 ]; then
+              echo "### Findings"
+              echo
+              jq -r '.issues[:5][] | "- `\(.id)` **\(.severity)** (\(.source)) — \(.file):\(.line) — \(.title)"' "$SUMMARY"
+              if [ "$COUNT" -gt 5 ]; then
+                echo
+                echo "$((COUNT - 5)) further findings in the \`qa-round-${QA_ROUND_ID}\` artifact, under \`qa/rounds/${QA_ROUND_ID}/\`."
+              fi
+              echo
+            fi
+
+            MANUAL=$(jq -r '.manualItems | length' "$SUMMARY")
+            if [ "$MANUAL" -gt 0 ]; then
+              echo "### Manual items (open, never counted as passes)"
+              echo
+              jq -r '.manualItems[] | "- \(.criterion) — \(.reason)"' "$SUMMARY"
+              echo
+            fi
+
+            if jq -e '.layers[] | select(.layer == "a11y" and .status != "skipped-unavailable")' "$SUMMARY" > /dev/null; then
+              echo "Automated accessibility scanning catches roughly a third to a half of real"
+              echo "issues. This round reports what axe and the keyboard checks could prove"
+              echo "against WCAG 2.2 Level AA; it is not a compliance statement."
+              echo
+            fi
+
+            echo "Full round: the \`qa-round-${QA_ROUND_ID}\` artifact on this run."
+          } > qa-comment.md
+
+          cat qa-comment.md >> "$GITHUB_STEP_SUMMARY"
+
+          PR="${{ github.event.pull_request.number }}"
+          gh pr comment "$PR" --body-file qa-comment.md --edit-last \
+            || gh pr comment "$PR" --body-file qa-comment.md
+
+      # The gate. Everything above reports; only this step decides the job.
+      - name: Gate on the verdict
+        if: always() && env.QA_STATUS == 'ok'
+        run: |
+          SUMMARY="qa/rounds/${QA_ROUND_ID}/summary.json"
+          if [ ! -f "$SUMMARY" ]; then
+            echo "FAIL — no summary.json was produced, so the round proved nothing." >&2
+            exit 1
+          fi
+
+          VERDICT=$(jq -r '.verdict' "$SUMMARY")
+          COMPLETE=$(jq -r '.complete' "$SUMMARY")
+
+          if [ "$VERDICT" != "pass" ]; then
+            echo "FAIL — QA round ${QA_ROUND_ID} verdict: ${VERDICT}." >&2
+            jq -r '.counts | "critical \(.critical), high \(.high), medium \(.medium), low \(.low), total \(.total)"' "$SUMMARY" >&2
+            exit 1
+          fi
+
+          # gate.skippedLayers is "fail" in CI, so the agent has already promoted a
+          # skip to a fail. This is the belt-and-braces check in case the config
+          # was overridden.
+          if [ "$COMPLETE" != "true" ]; then
+            echo "FAIL — QA round ${QA_ROUND_ID} is INCOMPLETE; a layer did not run." >&2
+            jq -r '.skippedLayers[] | "  skipped: \(.layer) — \(.reason)"' "$SUMMARY" >&2
+            exit 1
+          fi
+
+          echo "PASS — QA round ${QA_ROUND_ID}: every layer executed and exited zero."
+
+      - name: Report a stop rather than a pass
+        if: always() && env.QA_STATUS == 'no-stack'
+        run: |
+          echo "QA Agent stopped: no test stack detected in this repository."
+          echo "Choosing and installing a test framework is a human decision, so nothing"
+          echo "was installed, no round was allocated, and no verdict is available."
+          echo "This is not a PASS."

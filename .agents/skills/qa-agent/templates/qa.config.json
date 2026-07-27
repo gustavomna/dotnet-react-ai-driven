@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "roundSequence": "independent",
+  "outputDir": "qa",
+  "layers": {
+    "unit": true,
+    "integration": true,
+    "e2e": true,
+    "a11y": true
+  },
+  "gate": {
+    "skippedLayers": "warn",
+    "staleRound": "warn",
+    "flaky": "fail",
+    "baselineOnly": false
+  },
+  "scope": {
+    "defaultBase": "main",
+    "packages": []
+  },
+  "generation": {
+    "autoStage": false,
+    "testDirOverrides": {}
+  },
+  "a11y": {
+    "tags": ["wcag2a", "wcag2aa", "wcag22aa"],
+    "routes": [],
+    "failOnIncomplete": false
+  },
+  "execution": {
+    "timeoutSeconds": 1800,
+    "retryFailedOnce": true
+  }
+}

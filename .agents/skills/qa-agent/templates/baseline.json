@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-25T14:06:02Z",
+  "generatedBy": "qa-agent",
+  "reason": "initial adoption",
+  "history": [
+    {
+      "at": "2026-07-25T14:06:02Z",
+      "reason": "playwright 2.0 upgrade changed rule set",
+      "by": "gustavo"
+    }
+  ],
+  "fingerprints": [
+    {
+      "fp": "sha256:3f0c1a9b7d2e4c5a8b6f0d1e2c3a4b5d6e7f8091a2b3c4d5e6f708192a3b4c5d",
+      "source": "a11y",
+      "rule": "color-contrast",
+      "file": "frontend/src/legacy/widget.tsx",
+      "target": ".legacy .btn",
+      "severity": "medium"
+    }
+  ]
+}

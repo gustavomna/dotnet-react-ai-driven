@@ -23,6 +23,16 @@ auggie --print "<prompt>"   # auggie one-shot / non-interactive
 ./run-tasks.sh tasks/prd-<feature> --harness auggie   # auggie  (or set HARNESS=auggie)
 ```
 
+**Running a QA round under a chosen harness:**
+
+```bash
+./run-qa-agent.sh                                  # scope = diff against the default branch
+./run-qa-agent.sh --path frontend/src/components   # explicit scope
+./run-qa-agent.sh --audit                          # read-only audit: no test generation
+./run-qa-agent.sh --headless                       # CI mode: machine-readable final line
+./run-qa-agent.sh --harness auggie                 # (or set HARNESS=auggie)
+```
+
 **File-layout parity** (add/edit a wrapper in BOTH harness dirs to avoid drift — the shared skill body stays single-source):
 
 | Concern        | Claude Code            | auggie                  | Shared / single-source        |
@@ -73,6 +83,16 @@ dotnet watch run         # Hot-reload development server
 
 # E2E (from root)
 npx playwright test      # E2E tests (Playwright)
+
+# QA Agent mechanics (from root) — the deterministic parts of a QA round
+QA=.agents/skills/qa-agent/scripts/qa.py
+python3 $QA detect                  # Detect the test stack; exits 3 when none is detectable
+python3 $QA scope --diff            # Resolve what changed
+python3 $QA round new               # Allocate the next findings round
+python3 $QA exec --round N          # Run unit -> integration -> e2e -> a11y, in that order
+python3 $QA report --round N        # Write issue_NNN.md files + summary.md/summary.json
+python3 $QA verdict --round N       # Recompute the verdict (exit 0 pass / 1 fail)
+python3 $QA selftest                # Run the bundle's own 304-test suite
 ```
 
 - Frontend runs on port `localhost:5173`
@@ -104,15 +124,37 @@ Renaming the skills would touch `run-tasks.sh`, every command file, and invalida
 | Tasks             | Task planning                       | `create-tasks`                                                        |
 | Implementation    | Task execution                      | `run-task`                                                             |
 | Code Review       | Code review                         | `run-review`, `task-review`                                           |
-| QA                | Quality Assurance                   | `run-qa`                                                               |
+| QA (guided)       | Quality Assurance against a PRD     | `run-qa`                                                               |
+| QA (verification) | Execution-based verification gate   | `qa-agent` (derives a plan, generates + runs unit/integration/e2e/a11y, writes issue files) |
+| Accessibility     | WCAG 2.2 AA, axe-core               | `a11y-testing`                                                        |
 | Bugfix            | Bug fixing                          | `run-bugfix`                                                           |
 | Council Debate    | Multi-agent decision stress-testing | `council` (orchestrates `architect-advisor`, `devils-advocate`, `pragmatic-engineer`, `product-mind`, `security-advocate`, `the-thinker`) |
+
+**`run-qa` vs `qa-agent` — pick one, they are not interchangeable:**
+
+- **`run-qa`** (`/run-qa`) drives a *browser session* with Playwright MCP against a feature that has a PRD, Tech Spec and Tasks in `tasks/prd-<feature>/`. It is interactive, evidence-by-screenshot, and writes `bugs.md` plus a QA report. Use it when the feature has requirement documents and you want a human-narrated walkthrough.
+- **`qa-agent`** (`/qa-agent`) is the *verification gate*. It works from any scope — a path, a git ref range, a requirements doc, or just the diff — including on repositories with no requirement artifacts at all. It writes tests into the repo, executes unit → integration → e2e → a11y, and emits one `issue_NNN.md` per failure into an immutable round under `qa/`. Use it before a pull request, in CI, or to audit an unfamiliar repository.
+
+Neither replaces `run-review`: review reads intent and design, QA runs checks.
 
 ### Project Structure
 
 ```
 /                          # Project root
 ├── playwright.config.ts   # Playwright config (e2e)
+├── run-qa-agent.sh        # QA round runner (claude | auggie), CI-capable
+├── scripts/
+│   └── install-qa-agent.sh  # One-command install of the QA agent into any repo
+├── qa/                    # QA Agent output — committed, readable without the tool
+│   ├── qa.config.json     # Optional; every setting has a working default
+│   ├── baseline.json      # Pre-existing violations; regenerated only on request
+│   ├── suppressions.json  # Each entry needs target + reason + expiry
+│   └── rounds/NNN/        # Immutable findings round
+│       ├── plan.md/.json  # Criterion -> layer mapping, with the reason per choice
+│       ├── summary.md     # Human: counts by severity first
+│       ├── summary.json   # Machine gate: verdict, counts, issues
+│       ├── issue_NNN.md   # One file per failure
+│       └── runs/<ts>/     # Per-layer logs, exit codes, run.json
 ├── e2e/
 │   └── app.spec.ts        # E2E tests
 ├── frontend/
@@ -175,6 +217,8 @@ Renaming the skills would touch `run-tasks.sh`, every command file, and invalida
 - **Backend unit tests**: xUnit + FluentAssertions
 - **Backend integration tests**: `WebApplicationFactory<Program>` for testing HTTP endpoints
 - **E2E**: Playwright (Chromium, Firefox, WebKit) — tests in `e2e/`
+- **Accessibility**: WCAG 2.2 Level AA via axe-core. Tags are fixed at `wcag2a`, `wcag2aa`, `wcag22aa`. The a11y layer reports `skipped-unavailable` until `vitest-axe`/`jest-axe` and `@axe-core/playwright` are installed — the agent proposes the install, it never runs it.
+- **Never weaken a check to make it pass.** Deleting a test, skipping a test, disabling an axe or lint rule, widening a tolerance, or broadening an exclusion in response to a failure is forbidden. The only permitted response to a failure is a fix or a recorded issue. A suppression is valid only with an exact target, a reason, and an expiry condition.
 
 ### Git
 
@@ -190,3 +234,7 @@ Renaming the skills would touch `run-tasks.sh`, every command file, and invalida
 6. Using `yarn`, `pnpm`, or `bun` instead of `npm` for the frontend
 7. Putting business logic in controllers — use services
 8. Referencing Node.js backend frameworks (Express, Hono, Fastify) — the backend uses .NET
+9. Making a failing check pass by weakening it instead of fixing the cause or filing an issue
+10. Reporting a test that only passed on retry as `passed` — it is `flaky`
+11. Treating a `skipped-unavailable` layer as evidence of a pass
+12. Editing or deleting a sealed findings round — re-running QA allocates the next one

@@ -27,6 +27,14 @@ logs
 # Coverage
 coverage/
 
+# Python (QA agent bundle scripts)
+__pycache__/
+*.py[cod]
+
+# QA agent runtime scratch (findings rounds themselves ARE committed)
+qa/.runlock/
+qa/.runlogs/
+
 # Playwright
 /test-results/
 /playwright-report/
